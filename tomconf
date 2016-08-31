@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cd ~/.ssh
+
+# make sure config is a symbolic link
+if [[ -L config && -f config.tom ]]; then
+  rm config;
+  ln -s config.tom config;
+fi
