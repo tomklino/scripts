@@ -18,3 +18,4 @@ alias rgrep='grep -nri'
 alias wcl='wc -l'
 alias rsagen='ssh-keygen -t rsa -b 4096 -C'
 alias byebye='sudo poweroff'
+alias gitconcise="git log --pretty=oneline | sed -r 's/([0-9a-f]{7})[0-9a-f]*/\1/'"
