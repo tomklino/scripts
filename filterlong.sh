@@ -2,4 +2,4 @@
 
 max=${1:-80}
 
-awk "{if (length(\$1) < $max){print \$1}}"
+awk "{if (length(\$0) < $max){print \$0}}"
