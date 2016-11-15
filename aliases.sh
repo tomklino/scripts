@@ -23,3 +23,4 @@ alias c='clear'
 alias plz='sudo'
 alias flushdns='sudo service dnsmasq restart'
 alias resetdomainpass="smbpasswd -r 192.168.30.6 -U $LOGNAME"
+alias removeemptylines="sed '/^\s*$/d'"
