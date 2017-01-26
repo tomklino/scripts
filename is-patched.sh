@@ -1,8 +1,7 @@
 #!/bin/bash
 input=$1
 versionregex="3\.16\.39\-1|3\.2\.84\-1"
-space="\t"
-echo -e "fqdn patched?" | column -t -c2
+printf "%-65s %-4s \n" "fqdn" "patched?"
 
 while read line; do
   uname=$(ssh -n $line -o "ConnectTimeout 15" -o "StrictHostKeyChecking no" "uname -a")
@@ -11,5 +10,5 @@ while read line; do
   else
     patched="NO";
   fi
-  echo -e "$line $patched" | column -t -c2
+  printf "%-65s %-4s \n" "$line" "$patched"
 done < $input
