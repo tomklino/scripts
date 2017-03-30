@@ -20,5 +20,7 @@ lines=$(expr $total_length / $threads)
 
 split $tempdir/$filename --lines $lines $tempdir/x 
 
-for f in $(ls $tempdir | grep ^x[a-z][a-z]$); do sh -c "$cmd < $tempdir/$f 2>/tmp/errors & "; done
+for f in $(ls $tempdir | grep ^x[a-z][a-z]$); do
+  sh -c "while read line; do $cmd \$line; done < $tempdir/$f 2>/tmp/errors & ";
+done
 
