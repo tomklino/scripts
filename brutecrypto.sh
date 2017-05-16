@@ -6,7 +6,17 @@ if [[ !( $1 && $2 ) ]]; then
   echo 'tip: use "notify-send $(usage syntax)" to get notified at the end'
 fi
 
-for k in $(seq 0 $2); do
+if [[ $2 =~ ^[0-9]+$ ]]; then
+  from=0
+  to=$2
+else
+  from=$(sed -r 's/([0-9]+)-.*/\1 /' <<< $2)
+  to=$(sed -r 's/[0-9]+-([0-9]+)/\1/' <<< $2)
+fi
+
+echo >&2 "range is $from $to"
+
+for k in $(seq $from $to); do
   if [[ $(expr $k % 5000) == 0 ]]; then
     >&2 echo -n "."
   fi
