@@ -46,7 +46,7 @@ for ip in $(ls $workingDirectory/servers-to-scan-formatted.d); do
 done
 
 cd $workingDirectory
-tar czvf server-to-scan.tar.gz servers-to-scan-nmap-formatted.d
+tar czf server-to-scan.tar.gz servers-to-scan-nmap-formatted.d
 mv server-to-scan.tar.gz $originDirectory
 cd $originDirectory
 rm -R $workingDirectory
