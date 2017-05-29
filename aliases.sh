@@ -30,3 +30,5 @@ alias keepeye="ping -f -i1"
 alias copy="xclip -selection clipboard"
 alias gc="git commit -m"
 alias remove-leading-whitespaces="sed 's/^[ \t]*//'"
+alias atomit="atom . >/dev/null &"
+
