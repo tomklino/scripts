@@ -31,4 +31,4 @@ alias copy="xclip -selection clipboard"
 alias gc="git commit -m"
 alias remove-leading-whitespaces="sed 's/^[ \t]*//'"
 alias atomit="atom . >/dev/null &"
-
+alias parse-knife-search-node='grep -Ev "^[\ ]" | sed "/^\s*$/d" | cut -d ":" -f1'
