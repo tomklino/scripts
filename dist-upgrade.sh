@@ -13,7 +13,7 @@ apt-get --force-yes clean &&
 echo "cleaning old lists" &&
 rm /var/lib/apt/lists/* -rf
 echo "executing update" &&
-apt-get update &&
+apt-get update -o Acquire::CompressionTypes::Order::=gz &&
 echo "executing upgrade" &&
 apt-get --force-yes -o Dpkg::Options::="--force-confold" --force-yes -o Dpkg::Options::="--force-confdef" -fuy upgrade &&
 echo "executing dist-upgrade" &&
