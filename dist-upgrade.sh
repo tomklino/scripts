@@ -10,6 +10,8 @@ echo "executing autoremove" &&
 apt-get -fuy --force-yes autoremove &&
 echo "executing clean" &&
 apt-get --force-yes clean &&
+echo "cleaning old lists" &&
+rm /var/lib/apt/lists/* -rf
 echo "executing update" &&
 apt-get update &&
 echo "executing upgrade" &&
