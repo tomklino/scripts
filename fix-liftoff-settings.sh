@@ -1,1 +1,4 @@
-sed '{/Fullscreen/s/1/0/;/Resolution\ Height/s/>0</>1080</;/Resolution\ Width/s/>0</>1920</}' -i .config/unity3d/LuGus\ Studios/Liftoff/prefs
+HEIGHT=$(xdpyinfo | grep dimensions | grep -Eo [0-9]+x[0-9]+ | head -n1 | sed -r 's/^[0-9]+x([0-9]+)$/\1/')
+WIDTH=$(xdpyinfo | grep dimensions | grep -Eo [0-9]+x[0-9]+ | head -n1 | sed -r 's/^([0-9]+)x[0-9]+$/\1/')
+
+sed "{/Fullscreen/s/1/0/;/Resolution\ Height/s/>0</>$HEIGHT</;/Resolution\ Width/s/>0</>$WIDTH</}" -i .config/unity3d/LuGus\ Studios/Liftoff/prefs
