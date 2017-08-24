@@ -1,0 +1,5 @@
+#!/bin/bash
+
+WIX_DEPLOY_KEY="/home/tomk/.ssh/id_rsa"
+
+ssh -i $WIX_DEPLOY_KEY -o "IdentitiesOnly yes" $@
