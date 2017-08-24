@@ -2,6 +2,7 @@
 
 CACHE_DIR="/home/tomk/cachestuff"
 CACHE_FILE_NAME="node_list"
+GET_DATA_COMMAND="knife node list"
 
 STASH_DIR="${CACHE_DIR}/${CACHE_FILE_NAME}.d"
 SYM_LINK="${CACHE_DIR}/${CACHE_FILE_NAME}"
@@ -12,7 +13,7 @@ if [[ ! -d $STASH_DIR ]]; then
 fi
 
 cd ${STASH_DIR}
-knife node list > ${UPDATED_FILE_TARGET}
+bash -c "${GET_DATA_COMMAND}" > ${UPDATED_FILE_TARGET}
 cd ..
 if [[ -e ${SYM_LINK} ]]; then
   if [[ ! -L ${SYM_LINK} ]]; then
