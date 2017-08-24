@@ -25,7 +25,6 @@ alias flushdns='sudo service dnsmasq restart'
 alias resetdomainpass="smbpasswd -r 192.168.30.6 -U $LOGNAME"
 alias removeemptylines="sed '/^\s*$/d'"
 alias gitdrop="git add -A && git stash && git stash drop"
-alias refresh-nodes-cache="knife node list > ~/cachestuff/node_list"
 alias keepeye="ping -f -i1"
 alias copy="xclip -selection clipboard"
 alias gc="git commit -m"
