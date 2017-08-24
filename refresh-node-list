@@ -8,8 +8,12 @@ STASH_DIR="${CACHE_DIR}/${CACHE_FILE_NAME}.d"
 SYM_LINK="${CACHE_DIR}/${CACHE_FILE_NAME}"
 UPDATED_FILE_TARGET="${CACHE_FILE_NAME}_$(date +%F-%T)"
 
+exiterr() {
+  echo "$1" >&2 && exit 2;
+}
+
 if [[ ! -d $STASH_DIR ]]; then
-  mkdir $STASH_DIR || echo "cannot create stash dir at ${STASH_DIR}" && exit 2;
+  mkdir $STASH_DIR || exiterr "cannot create stash dir at ${STASH_DIR}";
 fi
 
 cd ${STASH_DIR}
@@ -17,7 +21,7 @@ bash -c "${GET_DATA_COMMAND}" > ${UPDATED_FILE_TARGET}
 cd ..
 if [[ -e ${SYM_LINK} ]]; then
   if [[ ! -L ${SYM_LINK} ]]; then
-    echo "${SYM_LINK} exists but is not a symbolic link" && exit 4;
+    exiterr "${SYM_LINK} exists but is not a symbolic link";
   else
     rm ${SYM_LINK}
   fi
