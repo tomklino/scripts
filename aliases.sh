@@ -32,3 +32,4 @@ alias gc="git commit -m"
 alias remove-leading-whitespaces="sed 's/^[ \t]*//'"
 alias atomit="atom . >/dev/null &"
 alias parse-knife-search-node='grep -Ev "^[\ ]" | sed "/^\s*$/d" | cut -d ":" -f1'
+alias my-postal-code='cat Documents/Not\ Wix/postal\ code'
