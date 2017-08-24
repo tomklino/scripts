@@ -1,0 +1,25 @@
+#!/bin/bash
+
+CACHE_DIR="/home/tomk/cachestuff"
+CACHE_FILE_NAME="node_list"
+
+STASH_DIR="${CACHE_DIR}/${CACHE_FILE_NAME}.d"
+SYM_LINK="${CACHE_DIR}/${CACHE_FILE_NAME}"
+UPDATED_FILE_TARGET="${CACHE_FILE_NAME}_$(date +%F-%T)"
+
+if [[ ! -d $STASH_DIR ]]; then
+  mkdir $STASH_DIR || echo "cannot create stash dir at ${STASH_DIR}" && exit 2;
+fi
+
+cd ${STASH_DIR}
+knife node list > ${UPDATED_FILE_TARGET}
+cd ..
+if [[ -e ${SYM_LINK} ]]; then
+  if [[ ! -L ${SYM_LINK} ]]; then
+    echo "${SYM_LINK} exists but is not a symbolic link" && exit 4;
+  else
+    rm ${SYM_LINK}
+  fi
+fi
+
+ln -s ${CACHE_FILE_NAME}.d/${UPDATED_FILE_TARGET} ${CACHE_FILE_NAME}
