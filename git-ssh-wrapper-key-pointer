@@ -1,0 +1,10 @@
+#!/bin/bash
+
+KEY=$(find . -maxdepth 1 -type l -name ".git_key_pointer")
+
+if [[ $KEY ]]; then
+  ssh -i .git_key_pointer -F /dev/null -o "IdentitiesOnly yes" $@
+else
+  ssh $@
+fi
+
