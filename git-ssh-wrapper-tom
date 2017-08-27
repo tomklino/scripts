@@ -6,19 +6,19 @@ TOM_DIRS="/home/tomk/scripts:/home/tom/scripts"
 WIX_KEY="/home/tomk/.ssh/tomkwix_rsa"
 WIX_DIRS="/home/tomk/workspace/chef-repo"
 
-KEY=$DEFUALT_KEY
+GIT_ARGS="$@"
 
 ssh_command() {
-  ssh -i $1 -F /dev/null -o "IdentitiesOnly yes" $@
+  ssh -i $1 -F /dev/null -o "IdentitiesOnly yes" $GIT_ARGS
 }
 
 ssh_with_dir_based_key() {
   oIFS=$IFS
   IFS=":"
   for dir in $2; do
-    if [ "$(pwd)" = "$dir"]; then
+    if [ "$(pwd)" = "$dir" ]; then
       IFS=$oIFS
-      ssh_command "$1"
+      ssh_command "$1" 
       exit 0;
     fi 
   done
