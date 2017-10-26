@@ -1,9 +1,20 @@
-WORKING_DIR=/home/tomk/Documents/Wix
+CONF_FILE="${HOME}/.workspace-notes.conf"
 NUM_OF_WORKSPACES=4
 DATE=$(date +%F)
 MONTH=$(date +%B | awk '{print tolower($0)}')
 
-cd $WORKING_DIR
+if [[ ! -e "$CONF_FILE" ]]; then
+  echo "no path defined for workspace notes working directory. type full path beginning with '/' or relative to home dir without '/':"
+  read WORKING_DIR
+  if [ "${WORKING_DIR:0:1}" != "/" ]; then
+    WORKING_DIR="\${HOME}/$WORKING_DIR"
+  fi
+  echo "WORKING_DIR=${WORKING_DIR}" > $CONF_FILE
+fi
+
+source $CONF_FILE
+
+cd $WORKING_DIR || (echo "could not cd into $WORKING_DIR" && exit)
 if [[ ! -d ${MONTH}.d ]]; then
   mkdir ${MONTH}.d
 fi
