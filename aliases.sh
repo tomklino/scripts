@@ -28,6 +28,7 @@ alias gitdrop="git add -A && git stash && git stash drop"
 alias keepeye="ping -f -i1"
 alias copy="xclip -selection clipboard"
 alias gc="git commit -m"
+alias gaa="git add -A && git diff --cached"
 alias remove-leading-whitespaces="sed 's/^[ \t]*//'"
 alias atomit="atom . >/dev/null &"
 alias parse-knife-search-node='grep -Ev "^[\ ]" | sed "/^\s*$/d" | cut -d ":" -f1'
