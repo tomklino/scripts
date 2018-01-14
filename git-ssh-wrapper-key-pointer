@@ -1,7 +1,11 @@
 #!/bin/bash
 
 GIT_WD=$(git rev-parse --show-toplevel)
-KEY=$(find $GIT_WD -maxdepth 1 -type l -name ".git_key_pointer")
+if [[ $GIT_KEY ]]; then
+  KEY="$GIT_KEY"
+else
+  KEY=$(find $GIT_WD -maxdepth 1 -type l -name ".git_key_pointer")
+fi
 
 if [[ $KEY ]]; then
   ssh -i $KEY -F /dev/null -o "IdentitiesOnly yes" $@
