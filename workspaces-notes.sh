@@ -27,6 +27,6 @@ fi
 
 cd workspaces-$DATE
 
-for i in $(seq 1 4); do touch workspace-$i; done
+for i in $(seq 1 $NUM_OF_WORKSPACES); do touch workspace-$i; done
 
 vim -O *
