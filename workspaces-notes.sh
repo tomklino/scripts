@@ -2,6 +2,7 @@ CONF_FILE="${HOME}/.workspace-notes.conf"
 NUM_OF_WORKSPACES=4
 DATE=$(date +%F)
 MONTH=$(date +%B | awk '{print tolower($0)}')
+WINDOW_TITLE="Workspaces"
 
 if [[ ! -e "$CONF_FILE" ]]; then
   echo "no path defined for workspace notes working directory. type full path beginning with '/' or relative to home dir without '/':"
@@ -28,5 +29,7 @@ fi
 cd workspaces-$DATE
 
 for i in $(seq 1 $NUM_OF_WORKSPACES); do touch workspace-$i; done
+
+echo -e '\033]2;'$WINDOW_TITLE'\007'
 
 vim -O *
