@@ -32,4 +32,4 @@ for i in $(seq 1 $NUM_OF_WORKSPACES); do touch workspace-$i; done
 
 echo -e '\033]2;'$WINDOW_TITLE'\007'
 
-vim -O *
+vim -o *
