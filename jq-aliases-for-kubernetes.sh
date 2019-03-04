@@ -1,4 +1,4 @@
-alias jq-get-owner="jq '.items[] | { name: .metadata.name, owner: { kind: .metadata.ownerReferences[].kind, name: .metadata.ownerReferences[].name }}'"
+alias jq-get-owner="jq '{ name: .metadata.name, owner: { kind: .metadata.ownerReferences[].kind, name: .metadata.ownerReferences[].name }}'"
 alias jq-get-env="jq '.spec.template.spec.containers[].env'"
 alias jq-get-volume-claim-templates="jq '.items[].spec.volumeClaimTemplates[]'"
 alias jq-get-labels="jq '.metadata.labels'"
