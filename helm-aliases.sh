@@ -31,3 +31,30 @@ function dockercfg-to-minikube() {
   kubectl create secret docker-registry gitlab-registry --docker-server=registry.dev.nvsrc.com --docker-username=${gitlab_username} --docker-password=${gitlab_password}
   kubectl patch sa default -p '{"imagePullSecrets": [{"name": "gitlab-registry"}]}'
 }
+
+function bootstrap-minikube-helm() {
+  function _execute() {
+    $($@ > /dev/null 2>&1)
+    return $?
+  }
+
+  function _wait-for-cmd() {
+    local cmd="$@"
+    until _execute "$cmd"; do
+      echo -n ".";
+      sleep 1;
+    done;
+  }
+
+  echo "minikube start:" &&
+  minikube start --cpus 4 --memory 8192 &&
+  echo "dockercfg-to-minikube:" &&
+  dockercfg-to-minikube &&
+  echo "bootstrap-helm:" &&
+  bootstrap-helm &&
+  _wait-for-cmd "helm ls" &&
+  echo 'your minikube is up and helm is ready!';
+
+  unset -f _execute
+  unset -f _wait-for-cmd
+}
