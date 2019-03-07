@@ -34,4 +34,6 @@ alias atomit="atom . >/dev/null &"
 alias parse-knife-search-node='grep -Ev "^[\ ]" | sed "/^\s*$/d" | cut -d ":" -f1'
 alias jqless="jq . -C | less -R"
 alias reload_bashrc="source ~/.bashrc"
+alias docker-rm-all='docker ps -aq --no-trunc -f status=exited | xargs docker rm'
+alias docker-stop-all='docker ps -q | xargs docker stop'
 
