@@ -65,7 +65,7 @@ fi
 
 echo "waiting for ${cmd}"
 function execute() {
-  (bash -c "$@");
+  (bash -c "$@ > /dev/null 2>&1");
   code=$?;
   return $code;
 }
