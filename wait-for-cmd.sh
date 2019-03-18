@@ -46,7 +46,17 @@ do
   esac
 done
 
-cmd="$@"
+# Preserve quotes arround quoted arguments
+cmd=''
+for i in "$@"; do
+  case "$i" in
+      *\'*)
+          i=`printf "%s" "$i" | sed "s/'/'\"'\"'/g"`
+          ;;
+      *) : ;;
+  esac
+  cmd="$cmd '$i'"
+done
 
 if [[ -z "$TIMEOUT" ]]; then TIMEOUT=1; fi
 if [[ -z "$cmd" ]]; then
@@ -55,8 +65,9 @@ fi
 
 echo "waiting for ${cmd}"
 function execute() {
-  $($@)
-  return $?
+  (bash -c "$@");
+  code=$?;
+  return $code;
 }
 
 FAILS=0
