@@ -9,6 +9,19 @@ function helmet() {
 }
 
 function bootstrap-helm() {
+  function _execute() {
+    $($@ > /dev/null 2>&1)
+    return $?
+  }
+
+  function _wait-for-cmd() {
+    local cmd="$@"
+    until _execute "$cmd"; do
+      echo -n ".";
+      sleep 1;
+    done;
+  }
+
   if [ "$(kubectl config current-context)" != "minikube" ]; then
     echo-red "kube context is not minikube. refusing to continue.";
     return;
@@ -16,6 +29,10 @@ function bootstrap-helm() {
   kubectl -n kube-system create sa tiller
   kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount kube-system:tiller
   helm init --service-account tiller
+  _wait-for-cmd "helm ls";
+
+  unset -f _execute
+  unset -f _wait-for-cmd
 }
 
 function dockercfg-to-minikube() {
@@ -33,28 +50,11 @@ function dockercfg-to-minikube() {
 }
 
 function bootstrap-minikube-helm() {
-  function _execute() {
-    $($@ > /dev/null 2>&1)
-    return $?
-  }
-
-  function _wait-for-cmd() {
-    local cmd="$@"
-    until _execute "$cmd"; do
-      echo -n ".";
-      sleep 1;
-    done;
-  }
-
   echo "minikube start:" &&
   minikube start --cpus 4 --memory 8192 &&
   echo "dockercfg-to-minikube:" &&
   dockercfg-to-minikube &&
   echo "bootstrap-helm:" &&
   bootstrap-helm &&
-  _wait-for-cmd "helm ls" &&
   echo 'your minikube is up and helm is ready!';
-
-  unset -f _execute
-  unset -f _wait-for-cmd
 }
