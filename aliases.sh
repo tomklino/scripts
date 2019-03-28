@@ -37,4 +37,5 @@ alias reload_bashrc="source ~/.bashrc"
 alias docker-rm-all='docker ps -aq --no-trunc -f status=exited | xargs docker rm'
 alias docker-stop-all='docker ps -q | xargs docker stop'
 alias lsgits='find -type d -name .git 2>/dev/null | sed -E "s|^\./(.+)/\.git$|\1|"'
+alias push-with-tags='git push && git push --tags'
 
