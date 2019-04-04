@@ -29,7 +29,9 @@ fi
 cd workspaces-$DATE
 
 for i in $(seq 1 $NUM_OF_WORKSPACES); do touch workspace-$i; done
+touch general;
 
 echo -e '\033]2;'$WINDOW_TITLE'\007'
 
-vim -o *
+vim -o workspace-* general
+
