@@ -37,6 +37,8 @@ alias docker-rm-all='docker ps -aq --no-trunc -f status=exited | xargs docker rm
 alias docker-stop-all='docker ps -q | xargs docker stop'
 alias lsgits='find -type d -name .git 2>/dev/null | sed -E "s|^\./(.+)/\.git$|\1|"'
 alias push-with-tags='git push && git push --tags'
+alias disable-touchpad-while-typing='gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing true'
+alias enable-touchpad-while-typing='gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing false'
 alias byebye='(cd ~/.byebye; find . -type f -name "check-*" | while read script; do $script || echo $script returned non-zero; done)'
 alias gitlab-pipelines="git remote get-url origin | sed -E 's|\.git$|/pipelines|'"
 alias open-gitlab-pipelines='firefox --new-tab $(git remote get-url origin | sed -E "s|\.git$|/pipelines|")'
