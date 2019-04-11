@@ -1,7 +1,17 @@
+export PS1_ADDITIONS=();
+
+function is_array() {
+  if [[ "$(declare -p $1 2>/dev/null)" =~ "declare -a" ]]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
 function ps1_additions() {
-  if [ -d ${HOME}/.ps1_additions ]; then
-    for addition in $(ls ${HOME}/.ps1_additions); do
-      echo -n "$(${HOME}/.ps1_additions/${addition})"
+  if is_array "PS1_ADDITIONS"; then
+    for addition in "${PS1_ADDITIONS[@]}"; do
+      echo -n "${addition}"
     done
   else
     echo -n "";
