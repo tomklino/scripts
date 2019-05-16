@@ -42,5 +42,5 @@ alias enable-touchpad-while-typing='gsettings set org.gnome.desktop.peripherals.
 alias byebye='(cd ~/.byebye; find . -type f -name "check-*" | while read script; do $script || echo $script returned non-zero; done)'
 alias gitlab-pipelines="git remote get-url origin | sed -E 's|\.git$|/pipelines|'"
 alias open-gitlab-pipelines='firefox --new-tab $(git remote get-url origin | sed -E "s|\.git$|/pipelines|")'
-alias drh='docker run --name $(basename `pwd`) -it --entrypoint sh -v `pwd`:/workdir --workdir /workdir --user $(id -u):$(id -g)'
+alias drh='docker run --name $(basename `pwd`) -it -v `pwd`:/workdir --workdir /workdir --user $(id -u):$(id -g)'
 
