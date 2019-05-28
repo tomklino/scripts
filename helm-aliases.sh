@@ -51,7 +51,7 @@ function dockercfg-to-minikube() {
 
 function bootstrap-minikube-helm() {
   echo "minikube start:" &&
-  minikube start --cpus 4 --memory 8192 &&
+  minikube start --cpus 4 --memory 8192 --kubernetes-version v1.13.5 &&
   echo "dockercfg-to-minikube:" &&
   dockercfg-to-minikube &&
   echo "bootstrap-helm:" &&
