@@ -43,4 +43,5 @@ alias byebye='(cd ~/.byebye; find . -type f -name "check-*" | while read script;
 alias gitlab-pipelines="git remote get-url origin | sed -E 's|\.git$|/pipelines|'"
 alias open-gitlab-pipelines='firefox --new-tab $(git remote get-url origin | sed -E "s|\.git$|/pipelines|")'
 alias drh='docker run --name $(basename `pwd`) -it -v /etc/passwd:/etc/passwd:ro --group-add root -v `pwd`:/workdir --workdir /workdir --user $(id -u):$(id -g) -e HOME=/workdir'
+alias gpft='git push --follow-tags'
 
