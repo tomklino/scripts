@@ -7,7 +7,7 @@
 #        unset-kube-config to unset the kube config
 CONFIGS_DIR=${HOME}/.kubeconfigs
 
-function use-kube-config() {
+function ckc() {
   chosen_file=${CONFIGS_DIR}/$1;
   if [ ! -f "${chosen_file}" ]; then
     echo "no config by that name"
@@ -28,5 +28,5 @@ function _kube_config_switch_completion() {
   COMPREPLY=($(compgen -W "$(ls $CONFIGS_DIR)" "${COMP_WORDS[1]}"))
 }
 
-complete -F _kube_config_switch_completion use-kube-config
+complete -F _kube_config_switch_completion ckc
 

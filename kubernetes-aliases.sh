@@ -8,3 +8,12 @@ alias jq-get-rules="jq '.spec.rules'"
 
 alias k-server-version="kubectl version -o yaml | yq r - 'serverVersion.gitVersion'"
 
+alias kgp="kubectl get pod"
+alias kgd="kubectl get deploy"
+alias kgs="kubectl get sts"
+alias kgi="kubectl get ing"
+
+function kexec() {
+  kubectl exec -it $1 -- ${@:2}
+}
+
