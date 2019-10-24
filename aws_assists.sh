@@ -9,3 +9,8 @@ function aws-all-dns-records() {
     done
 }
 
+function aws-get-ec2-ip() {
+  instance_id=$1
+  aws ec2 describe-instances --instance-ids $instance_id | jq -r '.Reservations[0].Instances[0].NetworkInterfaces[0].PrivateIpAddress'
+}
+
