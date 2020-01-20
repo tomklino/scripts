@@ -13,6 +13,13 @@ alias kgd="kubectl get deploy"
 alias kgs="kubectl get sts"
 alias kgi="kubectl get ing"
 
+function kgetcrashloop() {
+  crashlooppods=$(kubectl get pods -o json $@ | jq -r '.items[] | select(.status.containerStatuses[].state.waiting.reason == "CrashLoopBackOff") | .metadata.name')
+  if [ ! -z $crashlooppods ]; then
+    echo $crashlooppods| xargs kubectl get pods $@
+  fi
+}
+
 function kexec() {
   kubectl exec -it $1 -- ${@:2}
 }
