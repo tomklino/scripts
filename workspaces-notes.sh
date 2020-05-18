@@ -28,10 +28,10 @@ fi
 
 cd workspaces-$DATE
 
-for i in $(seq 1 $NUM_OF_WORKSPACES); do touch workspace-$i; done
-touch general;
+for i in $(seq 1 $NUM_OF_WORKSPACES); do touch workspace-${i}.txt; done
+touch general.txt;
 
 echo -e '\033]2;'$WINDOW_TITLE'\007'
 
-vim -o workspace-* general
+vim -o workspace-* general.txt
 
