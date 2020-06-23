@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# USAGE: place all kube configuration directories under the directory set by AZURE_CONFIGS
+# USAGE: place all azure configuration directories under the directory set by AZURE_CONFIGS
 #        then, use any of the commands:
 #        caz <config-name> - to use the config by that name from the AZURE_CONFIGS
 AZURE_CONFIGS=${HOME}/.azureconfigs
