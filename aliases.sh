@@ -33,7 +33,7 @@ alias remove-leading-whitespaces="sed 's/^[ \t]*//'"
 alias atomit="atom . >/dev/null &"
 alias parse-knife-search-node='grep -Ev "^[\ ]" | sed "/^\s*$/d" | cut -d ":" -f1'
 alias jqless="jq . -C | less -R"
-alias reload_bashrc="source ~/.bashrc"
+alias reload_bashrc="exec $SHELL"
 alias docker-rm-all='docker ps -aq --no-trunc -f status=exited | xargs docker rm'
 alias docker-stop-all='docker ps -q | xargs docker stop'
 alias lsgits='find -type d -name .git 2>/dev/null | sed -E "s|^\./(.+)/\.git$|\1|"'
@@ -46,4 +46,5 @@ alias open-gitlab-pipelines='firefox --new-tab $(git remote get-url origin | sed
 alias drh='docker run --name $(basename `pwd`) -it -v /etc/passwd:/etc/passwd:ro --group-add root -v `pwd`:/workdir --workdir /workdir --user $(id -u):$(id -g) -e HOME=/workdir'
 alias gpft='git push --follow-tags'
 alias sumlist='awk "{s+=\$1} END {print s}"'
+alias lexx="less -X"
 
