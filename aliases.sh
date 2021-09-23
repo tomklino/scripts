@@ -12,28 +12,19 @@ alias ls='ls --color=auto'
 alias nicedate='date +%F'
 alias ping84='ping 8.8.4.4'
 alias ping88='ping 8.8.8.8'
-alias wixpull='git pull --rebase'
-alias wixpush='git pull --rebase && git push'
-alias rgrep='grep -rnE'
+alias rgrep='grep -rnE --color=auto'
 alias wcl='wc -l'
 alias rsagen='ssh-keygen -t rsa -b 4096 -C'
-alias gitconcise="git log --pretty=oneline | sed -r 's/([0-9a-f]{7})[0-9a-f]*/\1/'"
 alias c='clear'
 alias plz='sudo'
 alias flushdns='sudo service dnsmasq restart'
-alias resetdomainpass="smbpasswd -r 192.168.30.6 -U $LOGNAME"
-alias removeemptylines="sed '/^\s*$/d'"
 alias gitdrop="git add -A && git stash && git stash drop"
 alias keepeye="ping -f -i1"
 alias copy="xclip -selection clipboard"
 alias xpaste="xclip -selection clipboard -o"
 alias gc="git commit -m"
 alias gaa="git add -A && git diff --cached"
-alias remove-leading-whitespaces="sed 's/^[ \t]*//'"
-alias atomit="atom . >/dev/null &"
-alias parse-knife-search-node='grep -Ev "^[\ ]" | sed "/^\s*$/d" | cut -d ":" -f1'
-alias jqless="jq . -C | less -R"
-alias reload_bashrc="exec $SHELL"
+alias jqless="jq . -C | less -XR"
 alias docker-rm-all='docker ps -aq --no-trunc -f status=exited | xargs docker rm'
 alias docker-stop-all='docker ps -q | xargs docker stop'
 alias lsgits='find -type d -name .git 2>/dev/null | sed -E "s|^\./(.+)/\.git$|\1|"'
