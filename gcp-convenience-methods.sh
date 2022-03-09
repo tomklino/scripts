@@ -1,5 +1,12 @@
 #!/bin/bash
 
+function get-project-number() {
+    project="$1"
+    gcloud --project=$project projects \
+        describe $project \
+        --format='get(projectNumber)'
+}
+
 function get-region-of-mig () {
     project="$1"
     mig_name="$2"
