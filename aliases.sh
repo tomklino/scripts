@@ -39,4 +39,5 @@ alias gpft='git push --follow-tags'
 alias sumlist='awk "{s+=\$1} END {print s}"'
 alias lexx="less -X"
 alias open-in-azure-devops='firefox --new-tab $(git remote get-url origin | sed -E "s|^[a-z]+@[a-z0-9\.\-]+\.com\:[a-z0-9]+/([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-]+)|https://dev.azure.com/\1/\2/_git/\3|")'
+alias tolower="awk '{print tolower(\$0)}'"
 
