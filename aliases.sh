@@ -37,7 +37,7 @@ alias open-gitlab-pipelines='firefox --new-tab $(git remote get-url origin | sed
 alias drh='docker run --name $(basename `pwd`) -it -v /etc/passwd:/etc/passwd:ro --group-add root -v `pwd`:/workdir --workdir /workdir --user $(id -u):$(id -g) -e HOME=/workdir'
 alias gpft='git push --follow-tags'
 alias sumlist='awk "{s+=\$1} END {print s}"'
-alias lexx="less -X"
+alias lexx="less -KFX"
 alias open-in-azure-devops='firefox --new-tab $(git remote get-url origin | sed -E "s|^[a-z]+@[a-z0-9\.\-]+\.com\:[a-z0-9]+/([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-]+)|https://dev.azure.com/\1/\2/_git/\3|")'
 alias tolower="awk '{print tolower(\$0)}'"
 alias gupa="git pull --rebase --autostash"
