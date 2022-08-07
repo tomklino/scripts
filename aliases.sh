@@ -7,12 +7,16 @@ alias grep='grep --color=auto'
 alias l='ls -CF'
 alias la='ls -A'
 alias listinstalled='dpkg -l | grep ^ii'
-alias ll='ls -lah --color=always | less -KFXR'
+function ll() {
+    ls -lah --color=always $@ | less -KFXR
+}
 alias ls='ls --color=auto'
 alias nicedate='date +%F'
 alias ping84='ping 8.8.4.4'
 alias ping88='ping 8.8.8.8'
-alias rgrep='grep -rnE --color=auto'
+function rgrep() {
+    grep -rnE --color=always $@ | less -KFXR
+}
 alias wcl='wc -l'
 alias rsagen='ssh-keygen -t rsa -b 4096 -C'
 alias c='clear'
