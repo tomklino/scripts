@@ -32,3 +32,11 @@ function color_my_prompt {
 color_my_prompt
 # set terminal title to current working directory
 export PROMPT_COMMAND='echo -ne "\033]2;$(dirs +0)\007"'
+function set_terminal_name() {
+  unset PROMPT_COMMAND
+  echo -ne "\033]2;${@}\007"
+}
+function unset_terminal_name() {
+  export PROMPT_COMMAND='echo -ne "\033]2;$(dirs +0)\007"'
+}
+
