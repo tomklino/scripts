@@ -20,3 +20,9 @@ function browse-notes() {
   )
 }
 
+bug-notes () {
+	(
+		cd ~/notes && grep --color=auto -rI "^Bug: $1" | cut -d':' -f1 | xargs cat | less -KFX -X
+	)
+}
+
