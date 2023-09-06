@@ -45,4 +45,5 @@ alias lexx="less -KFX"
 alias open-in-azure-devops='firefox --new-tab $(git remote get-url origin | sed -E "s|^[a-z]+@[a-z0-9\.\-]+\.com\:[a-z0-9]+/([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-]+)|https://dev.azure.com/\1/\2/_git/\3|")'
 alias tolower="awk '{print tolower(\$0)}'"
 alias gupa="git pull --rebase --autostash"
+alias cds='cd $(git rev-parse --show-toplevel)'
 
