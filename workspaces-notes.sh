@@ -35,7 +35,7 @@ cd workspaces-$DATE
 
 NUM_OF_WORKSPACES=${1:-$NUM_OF_WORKSPACES}
 for i in $(seq 1 $NUM_OF_WORKSPACES); do
-    touch workspace-${i}.txt;
+    touch workspace-${i}.md;
 done
 
 echo -e '\033]2;'$WINDOW_TITLE'\007'
