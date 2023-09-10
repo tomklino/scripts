@@ -22,7 +22,7 @@ if [[ ! -d ${MONTH}.d ]]; then
 fi
 
 cd ${MONTH}.d || (echo "could not use ${MONTH}.d as a direcotry" && exit)
-MONTHLY_FILE="$(date +%B-%Y).txt"
+MONTHLY_FILE="$(date +%B-%Y).md"
 touch $MONTHLY_FILE
 
 ### Creating Daily Files ###
