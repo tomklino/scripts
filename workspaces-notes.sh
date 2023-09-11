@@ -31,6 +31,8 @@ if [[ ! -d workspaces-$DATE ]]; then
   mkdir workspaces-$DATE
 fi
 
+(cd $HOME; ln -f -s ${WORKING_DIR}/${MONTH}.d/workspaces-${DATE} daily-notes)
+
 cd workspaces-$DATE
 
 NUM_OF_WORKSPACES=${1:-$NUM_OF_WORKSPACES}
