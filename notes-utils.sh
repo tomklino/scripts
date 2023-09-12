@@ -15,7 +15,8 @@ function browse-notes() {
     days=${1:-180}
   ( source ~/.workspace-notes.conf;
     cd ${WORKING_DIR} && \
-        find -daystart -mtime -${days} -type f -name '*.txt' -printf "%T@ %p\n" |\
+        find -daystart -mtime -${days} -type f \
+        \( -name '*.txt' -o -name '*.md' \) -printf "%T@ %p\n" |\
         sort -rn | awk '{print $2}' | xargs cat | less -X
   )
 }
