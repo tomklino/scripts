@@ -31,7 +31,7 @@ if [[ ! -d workspaces-$DATE ]]; then
   mkdir workspaces-$DATE
 fi
 
-(cd $HOME; ln -f -s ${WORKING_DIR}/${MONTH}.d/workspaces-${DATE} daily-notes)
+(cd $HOME; ln -T -f -s ${WORKING_DIR}/${MONTH}.d/workspaces-${DATE} daily-notes)
 
 cd workspaces-$DATE
 
