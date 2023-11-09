@@ -13,15 +13,18 @@ if [[ ! -e "$CONF_FILE" ]]; then
 fi
 
 source $CONF_FILE
+cd $WORKING_DIR || (echo "could not cd into $WORKING_DIR" && exit)
+
+### Creating Yearly Dir ###
+YEAR=$(date +%G | awk '{print tolower($0)}')
+mkdir -p ${YEAR}
+cd ${YEAR} || (echo "could not use ${YEAR} as a directory" && exit)
 
 ### Creating Monthly Dir ###
 MONTH=$(date +%B | awk '{print tolower($0)}')
-cd $WORKING_DIR || (echo "could not cd into $WORKING_DIR" && exit)
-if [[ ! -d ${MONTH}.d ]]; then
-  mkdir ${MONTH}.d
-fi
-
+mkdir -p ${MONTH}.d
 cd ${MONTH}.d || (echo "could not use ${MONTH}.d as a direcotry" && exit)
+
 MONTHLY_FILE="$(date +%B-%Y).md"
 touch $MONTHLY_FILE
 
