@@ -46,4 +46,5 @@ alias open-in-azure-devops='firefox --new-tab $(git remote get-url origin | sed 
 alias tolower="awk '{print tolower(\$0)}'"
 alias gupa="git pull --rebase --autostash"
 alias cds='cd $(git rev-parse --show-toplevel)'
+alias cdp='cd $(dirname $(xpaste))'
 
