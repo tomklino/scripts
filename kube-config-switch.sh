@@ -30,3 +30,16 @@ function _kube_config_switch_completion() {
 
 complete -F _kube_config_switch_completion ckc
 
+# NOTE: Might not work if yq is installed using snap, due to snap confinment.
+# Install from binaries provided by github instead.
+function rename-context () {
+	export new_name="$1"
+	config_file=${KUBECONFIG:-"~/.kube/config"}
+	yq e -i '.current-context as $current | .contexts[] |= (select(.name == $current) | .name = env(new_name)) | .current-context = env(new_name)' $config_file
+	if ! [ -z $KUBECONFIG ]
+	then
+		mv $KUBECONFIG ${CONFIGS_DIR}/${new_name}
+		export KUBECONFIG=${CONFIGS_DIR}/${new_name}
+	fi
+}
+
