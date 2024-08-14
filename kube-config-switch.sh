@@ -14,10 +14,7 @@ function ckc() {
     return 1;
   fi
   export KUBECONFIG=${chosen_file};
-}
-
-function use-pwd-kube-config() {
-  export KUBECONFIG=config;
+  KUBE_PS1_ENABLED=on
 }
 
 function unset-kube-config() {
