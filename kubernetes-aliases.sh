@@ -24,3 +24,9 @@ function kexec() {
   kubectl exec -it $1 -- ${@:2}
 }
 
+function get-crd-short-names() {
+  kubectl get crd -ojson |\
+    jq -r --arg term "$1" \
+      '.items[].spec.names | select(.singular | test($term)) | [.singular, ([.shortNames[]?]|join(","))] | @tsv' | column -t
+}
+
