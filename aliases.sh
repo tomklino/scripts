@@ -47,4 +47,7 @@ alias tolower="awk '{print tolower(\$0)}'"
 alias gupa="git pull --rebase --autostash"
 alias cds='cd $(git rev-parse --show-toplevel)'
 alias cdp='cd $(git rev-parse --show-toplevel)/$(dirname $(xpaste))'
+function cdto() {
+  cd $(git rev-parse --show-toplevel) && cd $(dirname $@)
+}
 
