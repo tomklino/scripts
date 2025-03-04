@@ -2,7 +2,7 @@
 KUBECTL_CMD=$(whereis -b kubectl | awk '{print $2}')
 
 function kubectl() {
-  if awk '{for(i=1;i<=NF;i++) {if ($i == "edit") exit 0}; exit 1}' <<< $@; then
+  if awk '{for(i=1;i<=NF;i++) {if ($i == "edit" || $i == "debug") exit 0}; exit 1}' <<< $@; then
     $KUBECTL_CMD $@
     return $?
   fi
