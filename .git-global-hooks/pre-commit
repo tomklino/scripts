@@ -1,0 +1,71 @@
+#!/bin/sh
+
+echo "global hook"
+
+# Get list of staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ -z "$staged_files" ]; then
+  # No files to check, exit silently
+  exit 0
+fi
+
+fixed_newlines=0
+fixed_whitespace=0
+
+# Check and fix each staged file
+for file in $staged_files; do
+  # Skip files that don't exist or aren't regular files
+  if [ ! -f "$file" ]; then
+    continue
+  fi
+
+  # Skip binary files
+  if ! grep -Iq . "$file"; then
+    continue
+  fi
+
+  needs_update=0
+
+  # Create temporary file
+  temp_file=$(mktemp)
+
+  # Fix trailing whitespace and preserve final newline status
+  has_final_newline=0
+  if [ "$(tail -c 1 "$file")" = "" ]; then
+    has_final_newline=1
+  fi
+
+  # Remove trailing whitespace
+  sed 's/[[:space:]]*$//' "$file" > "$temp_file"
+
+  # Check if we removed any trailing whitespace
+  if ! cmp -s "$file" "$temp_file"; then
+    needs_update=1
+    fixed_whitespace=$((fixed_whitespace+1))
+  fi
+
+  # Check and fix final newline
+  if [ "$has_final_newline" -eq 0 ]; then
+    echo >> "$temp_file"
+    needs_update=1
+    fixed_newlines=$((fixed_newlines+1))
+  fi
+
+  # Update the file if needed
+  if [ "$needs_update" -eq 1 ]; then
+    cat "$temp_file" > "$file"
+    git add "$file"
+  fi
+
+  # Clean up temp file
+  rm "$temp_file"
+done
+
+# Report changes
+if [ "$fixed_newlines" -gt 0 ] || [ "$fixed_whitespace" -gt 0 ]; then
+  echo "Fixed $fixed_newlines files with missing newlines"
+  echo "Fixed $fixed_whitespace files with trailing whitespace"
+fi
+
+exit 0
