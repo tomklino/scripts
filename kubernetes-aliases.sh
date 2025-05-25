@@ -35,3 +35,9 @@ function get-crd-short-names() {
     column -t
 }
 
+function kgetsecret () {
+	namespace=$1
+	secret=$2
+	kubectl -n $namespace get secret $secret -ojson | jq -r '.data | to_entries[] | "\(.key)\t\(.value | @base64d)"'
+}
+
