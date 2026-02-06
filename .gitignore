@@ -1,3 +1,5 @@
 nohup.out
 *.swp
 .git_key_pointer
+**/__pycache__/**
+
