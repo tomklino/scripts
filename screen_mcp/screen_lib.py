@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
+import time
 from typing import NamedTuple
 
 PROMPT_ARROW = '__>'
@@ -71,6 +73,190 @@ def create_screen_session(session_name: str) -> bool:
         return result.returncode == 0
     finally:
         os.unlink(tmp_screenrc)
+
+
+def capture_screen(session_name: str, timeout: float = 2.0) -> str:
+    """
+    Capture the current screen content using hardcopy.
+
+    Args:
+        session_name: Name of the screen session
+        timeout: Max time to wait for hardcopy file (seconds)
+
+    Returns:
+        The captured screen content as a string
+    """
+    # Use /tmp explicitly - macOS temp dirs can cause issues with screen
+    tmp_file = f"/tmp/screen_hardcopy_{os.getpid()}.txt"
+
+    # Remove any existing file
+    if os.path.exists(tmp_file):
+        os.unlink(tmp_file)
+
+    try:
+        subprocess.run(
+            ['screen', '-S', session_name, '-X', 'hardcopy', '-h', tmp_file],
+            capture_output=True,
+            text=True
+        )
+
+        # Wait for file to be created by screen
+        start = time.time()
+        while time.time() - start < timeout:
+            if os.path.exists(tmp_file) and os.path.getsize(tmp_file) > 0:
+                break
+            time.sleep(0.05)
+
+        if not os.path.exists(tmp_file):
+            return ''
+
+        # Use cat to read file - avoids filesystem caching issues on macOS
+        # TODO: Read file as a stream line-by-line instead of using cat
+        result = subprocess.run(['cat', tmp_file], capture_output=True)
+        raw = result.stdout
+
+        # Strip null bytes and decode
+        return raw.replace(b'\x00', b'').decode('utf-8', errors='replace')
+    finally:
+        if os.path.exists(tmp_file):
+            os.unlink(tmp_file)
+
+
+def get_n_last_lines(session_name: str, lines: int = 10) -> str:
+    """
+    Get the last N lines from the terminal.
+
+    Args:
+        session_name: Name of the screen session
+        lines: Number of lines to return (default: 10)
+
+    Returns:
+        The last N lines as a string
+    """
+    content = capture_screen(session_name)
+    content_lines = content.split('\n')
+
+    # Strip control characters from each line
+    cleaned_lines = []
+    for line in content_lines:
+        cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', line)
+        cleaned_lines.append(cleaned)
+
+    # Find first and last non-empty lines to trim padding
+    first_content = 0
+    for i, line in enumerate(cleaned_lines):
+        if line.strip():
+            first_content = i
+            break
+
+    last_content = len(cleaned_lines) - 1
+    for i in range(len(cleaned_lines) - 1, -1, -1):
+        if cleaned_lines[i].strip():
+            last_content = i
+            break
+
+    # Get content between first and last non-empty lines (inclusive)
+    trimmed = cleaned_lines[first_content:last_content + 1]
+
+    return '\n'.join(trimmed[-lines:])
+
+
+def send_to_terminal(
+    session_name: str,
+    command: str,
+    prompt_verify_string: str | None = None
+) -> bool:
+    """
+    Send a command to the terminal without waiting for completion.
+
+    Args:
+        session_name: Name of the screen session
+        command: Command to send
+        prompt_verify_string: If provided, only send if prompt contains this
+
+    Returns:
+        True if command was sent, False if prompt verification failed
+    """
+    if prompt_verify_string is not None:
+        content = capture_screen(session_name)
+        lines = content.rstrip('\n').split('\n')
+        # Check the last non-empty line for prompt
+        last_line = ''
+        for line in reversed(lines):
+            if line.strip():
+                last_line = line
+                break
+        if prompt_verify_string not in last_line:
+            return False
+
+    subprocess.run(
+        ['screen', '-S', session_name, '-X', 'stuff', f'{command}\n'],
+        capture_output=True,
+        text=True
+    )
+    return True
+
+
+def execute_in_terminal(
+    session_name: str,
+    command: str,
+    prompt_verify_string: str | None = None,
+    sync: bool = True,
+    timeout: float = 30.0,
+    poll_interval: float = 0.2
+) -> str | None:
+    """
+    Execute a command in the terminal.
+
+    Args:
+        session_name: Name of the screen session
+        command: Command to execute
+        prompt_verify_string: If provided, only execute if prompt contains this
+        sync: If True, wait for command to finish and return output
+        timeout: Maximum time to wait for command completion (seconds)
+        poll_interval: How often to check for completion (seconds)
+
+    Returns:
+        If sync=True: Full output including prompts, or None if verification
+            failed or timeout
+        If sync=False: Empty string on success, None if verification failed
+    """
+    if not send_to_terminal(session_name, command, prompt_verify_string):
+        return None
+
+    if not sync:
+        return ''
+
+    # Wait for command to complete by watching for a new prompt
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        time.sleep(poll_interval)
+        content = capture_screen(session_name)
+        result = get_last_command(content)
+        if result is None:
+            continue
+        # Check if command finished (new prompt appeared with no command)
+        lines = content.rstrip('\n').split('\n')
+        for line in reversed(lines):
+            if not line.strip():
+                continue
+            # If last non-empty line has prompt arrow but no command after it,
+            # the command has completed
+            if PROMPT_ARROW in line:
+                parts = line.split(PROMPT_ARROW, 1)
+                after_arrow = parts[1].strip() if len(parts) > 1 else ''
+                tokens = after_arrow.split()
+                # Skip directory and optional git info
+                cmd_start = 1
+                if len(tokens) > 1 and tokens[1].startswith('git:('):
+                    cmd_start = 2
+                remaining = tokens[cmd_start:] if len(tokens) > cmd_start else []
+                if not remaining:
+                    # Command finished, return output
+                    return result.output
+            break
+
+    return None  # Timeout
 
 
 def get_last_command(terminal_output: str) -> CommandOutput | None:
