@@ -17,6 +17,11 @@ class CommandOutput(NamedTuple):
     output: str
 
 
+class PromptVerificationError(Exception):
+    """Raised when terminal prompt verification fails."""
+    pass
+
+
 SCREEN_SETTINGS = [
     'termcapinfo xterm* ti@:te@',
     'defscrollback 250000',
@@ -75,7 +80,7 @@ def create_screen_session(session_name: str) -> bool:
         os.unlink(tmp_screenrc)
 
 
-def capture_screen(session_name: str, timeout: float = 2.0) -> str:
+def _capture_screen(session_name: str, timeout: float = 2.0) -> str:
     """
     Capture the current screen content using hardcopy.
 
@@ -131,7 +136,7 @@ def get_n_last_lines(session_name: str, lines: int = 10) -> str:
     Returns:
         The last N lines as a string
     """
-    content = capture_screen(session_name)
+    content = _capture_screen(session_name)
     content_lines = content.split('\n')
 
     # Strip control characters from each line
@@ -159,6 +164,18 @@ def get_n_last_lines(session_name: str, lines: int = 10) -> str:
     return '\n'.join(trimmed[-lines:])
 
 
+def _verify_terminal_prompt(session_name: str, verify_string: str) -> bool:
+    content = _capture_screen(session_name)
+    lines = content.rstrip('\n').split('\n')
+    # Check the last non-empty line for prompt
+    last_line = ''
+    for line in reversed(lines):
+        if line.strip():
+            last_line = line
+            break
+
+    return verify_string in last_line
+
 def send_to_terminal(
     session_name: str,
     command: str,
@@ -176,16 +193,10 @@ def send_to_terminal(
         True if command was sent, False if prompt verification failed
     """
     if prompt_verify_string is not None:
-        content = capture_screen(session_name)
-        lines = content.rstrip('\n').split('\n')
-        # Check the last non-empty line for prompt
-        last_line = ''
-        for line in reversed(lines):
-            if line.strip():
-                last_line = line
-                break
-        if prompt_verify_string not in last_line:
-            return False
+        if _verify_terminal_prompt(
+            session_name=session_name,
+            verify_string=prompt_verify_string) == False:
+                return False
 
     subprocess.run(
         ['screen', '-S', session_name, '-X', 'stuff', f'{command}'],
@@ -219,6 +230,14 @@ def execute_in_terminal(
             failed or timeout
         If sync=False: Empty string on success, None if verification failed
     """
+    if prompt_verify_string is not None:
+        if not _verify_terminal_prompt(
+            session_name=session_name,
+            verify_string=prompt_verify_string):
+            raise PromptVerificationError(
+                f"Prompt does not contain '{prompt_verify_string}'"
+            )
+
     subprocess.run(
         ['screen', '-S', session_name, '-X', 'stuff', f'{command}\n'],
         capture_output=True,
@@ -231,7 +250,7 @@ def execute_in_terminal(
     start_time = time.time()
     while time.time() - start_time < timeout:
         time.sleep(poll_interval)
-        content = capture_screen(session_name)
+        content = _capture_screen(session_name)
         result = get_last_command(content)
         if result is None:
             continue
