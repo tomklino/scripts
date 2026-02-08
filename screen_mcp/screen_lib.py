@@ -86,10 +86,8 @@ def capture_screen(session_name: str, timeout: float = 2.0) -> str:
     Returns:
         The captured screen content as a string
     """
-    # Use /tmp explicitly - macOS temp dirs can cause issues with screen
     tmp_file = f"/tmp/screen_hardcopy_{os.getpid()}.txt"
 
-    # Remove any existing file
     if os.path.exists(tmp_file):
         os.unlink(tmp_file)
 
@@ -100,26 +98,26 @@ def capture_screen(session_name: str, timeout: float = 2.0) -> str:
             text=True
         )
 
-        # Wait for file to be created by screen
+        # Wait for file size to stabilize
         start = time.time()
+        last_size = -1
         while time.time() - start < timeout:
-            if os.path.exists(tmp_file) and os.path.getsize(tmp_file) > 0:
-                break
+            if os.path.exists(tmp_file):
+                current_size = os.path.getsize(tmp_file)
+                if current_size > 0 and current_size == last_size:
+                    break
+                last_size = current_size
             time.sleep(0.05)
 
-        if not os.path.exists(tmp_file):
-            return ''
+        with open(tmp_file, encoding='utf-8', errors='replace') as f:
+            raw = f.read()
 
-        # Use cat to read file - avoids filesystem caching issues on macOS
-        # TODO: Read file as a stream line-by-line instead of using cat
-        result = subprocess.run(['cat', tmp_file], capture_output=True)
-        raw = result.stdout
-
-        # Strip null bytes and decode
-        return raw.replace(b'\x00', b'').decode('utf-8', errors='replace')
+        # Strip null bytes
+        return raw #.replace("\x00", "")
     finally:
-        if os.path.exists(tmp_file):
-            os.unlink(tmp_file)
+        blah = 1
+        # if os.path.exists(tmp_file):
+        #     os.unlink(tmp_file)
 
 
 def get_n_last_lines(session_name: str, lines: int = 10) -> str:
@@ -190,7 +188,7 @@ def send_to_terminal(
             return False
 
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', f'{command}\n'],
+        ['screen', '-S', session_name, '-X', 'stuff', f'{command}'],
         capture_output=True,
         text=True
     )
@@ -203,7 +201,7 @@ def execute_in_terminal(
     prompt_verify_string: str | None = None,
     sync: bool = True,
     timeout: float = 30.0,
-    poll_interval: float = 0.2
+    poll_interval: float = 0.001
 ) -> str | None:
     """
     Execute a command in the terminal.
@@ -221,9 +219,11 @@ def execute_in_terminal(
             failed or timeout
         If sync=False: Empty string on success, None if verification failed
     """
-    if not send_to_terminal(session_name, command, prompt_verify_string):
-        return None
-
+    subprocess.run(
+        ['screen', '-S', session_name, '-X', 'stuff', f'{command}\n'],
+        capture_output=True,
+        text=True
+    )
     if not sync:
         return ''
 
