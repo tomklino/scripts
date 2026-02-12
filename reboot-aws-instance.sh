@@ -55,7 +55,7 @@ for region in "${REGIONS[@]}"; do
     --region "$region" \
     --filters "Name=tag:Name,Values=*${INSTANCE_PATTERN}*" \
     --query "Reservations[*].Instances[*].[InstanceId,Tags[?Key==\`Name\`].Value|[0],State.Name,PrivateIpAddress,PublicIpAddress,\`${region}\`]" \
-    --output text)
+    --output text | grep -v '^[[:space:]]*$' || true)
   if [ -n "$region_output" ]; then
     if [ -n "$output" ]; then
       output=$(printf "%s\n%s" "$output" "$region_output")
@@ -65,11 +65,15 @@ for region in "${REGIONS[@]}"; do
   fi
 done
 
-# Filter empty lines
-output=$(echo "$output" | grep -v '^$' || true)
+# Filter any remaining empty lines
+output=$(echo "$output" | grep -v '^[[:space:]]*$' || true)
 
 # Count lines in output
-line_count=$(echo "$output" | grep -c '^' || true)
+if [ -z "$output" ]; then
+  line_count=0
+else
+  line_count=$(echo "$output" | wc -l | tr -d ' ')
+fi
 
 if [ "$line_count" -eq 0 ]; then
   echo "No instances found matching the filter"
