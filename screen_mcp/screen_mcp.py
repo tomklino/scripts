@@ -57,6 +57,23 @@ def send_command(
 
 
 @mcp.tool()
+def send_interrupt(session_name: str) -> str:
+    """
+    Send CTRL+C interrupt to the terminal.
+
+    Use this to cancel a running command or break out of an interactive prompt.
+
+    Args:
+        session_name: Name of the screen session
+
+    Returns:
+        "sent" when the interrupt was sent
+    """
+    screen_lib.send_interrupt(session_name)
+    return "sent"
+
+
+@mcp.tool()
 def execute_command(
     session_name: str,
     command: str,
@@ -93,6 +110,30 @@ def execute_command(
         return result if result is not None else "timeout"
     except screen_lib.PromptVerificationError:
         return "prompt_mismatch"
+
+
+@mcp.tool()
+def wait_for_completion(
+    session_name: str,
+    timeout: float = 30.0
+) -> str:
+    """
+    Wait for a previously sent command to complete.
+
+    Use this after send_command or after execute_command times out - when you need
+    to wait for the command to finish and retrieve its output. Polls the terminal
+    until a new empty prompt appears.
+
+    Args:
+        session_name: Name of the screen session
+        timeout: Maximum seconds to wait for completion (default: 30)
+
+    Returns:
+        The command output if completed, "timeout" if the command didn't
+        complete within the timeout period
+    """
+    result = screen_lib.wait_for_command_completion(session_name, timeout)
+    return result if result is not None else "timeout"
 
 
 @mcp.tool()

@@ -1,8 +1,8 @@
 ## Screen MCP
 
 When interacting with screen sessions:
-* "send" a command = use `mcp__screen__send_command` (does NOT wait for
-  completion)
+* "send" a command = use `mcp__screen__send_command` (sends a string to the
+  terminal but does not execute it until the user hits enter)
 * "execute" or "run" a command = use `mcp__screen__execute_command` (waits
   for completion and returns output)
 
@@ -19,5 +19,9 @@ commands:
   command using a kubernetes context, make sure to use the
   `prompt_verify_string` with the expected context. If the user did not
   provide a context, remind them.
+* Before executing the first command for a given context, check the full
+  context string using the `get_last_lines` tool, make sure it matches
+  what the user requested, and use the full line in the `prompt_verify_string`
+  for future command executions
 * If verification fails, the tool returns `"prompt_mismatch"` instead
   of executing

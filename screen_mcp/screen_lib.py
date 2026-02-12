@@ -206,6 +206,66 @@ def send_to_terminal(
     return True
 
 
+def send_interrupt(session_name: str) -> None:
+    """
+    Send CTRL+C interrupt to the terminal.
+
+    Args:
+        session_name: Name of the screen session
+    """
+    subprocess.run(
+        ['screen', '-S', session_name, '-X', 'stuff', '\x03'],
+        capture_output=True,
+        text=True
+    )
+
+
+def wait_for_command_completion(
+    session_name: str,
+    timeout: float = 30,
+    poll_interval: float = 0.001
+) -> str | None:
+    """
+    Wait for a command to complete by polling for a new empty prompt.
+
+    Args:
+        session_name: Name of the screen session
+        timeout: Maximum time to wait for command completion (seconds)
+        poll_interval: How often to check for completion (seconds)
+
+    Returns:
+        Command output if completed, None if timeout
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        time.sleep(poll_interval)
+        content = _capture_screen(session_name)
+        result = get_last_command(content)
+        if result is None:
+            continue
+        # Check if command finished (new prompt appeared with no command)
+        lines = content.rstrip('\n').split('\n')
+        for line in reversed(lines):
+            if not line.strip():
+                continue
+            # If last non-empty line has prompt arrow but no command after it,
+            # the command has completed
+            if PROMPT_ARROW in line:
+                parts = line.split(PROMPT_ARROW, 1)
+                after_arrow = parts[1].strip() if len(parts) > 1 else ''
+                tokens = after_arrow.split()
+                # Skip directory and optional git info
+                cmd_start = 1
+                if len(tokens) > 1 and tokens[1].startswith('git:('):
+                    cmd_start = 2
+                remaining = tokens[cmd_start:] if len(tokens) > cmd_start else []
+                if not remaining:
+                    # Command finished, return output
+                    return result.output
+            break
+
+    return None  # Timeout
+
 def execute_in_terminal(
     session_name: str,
     command: str,
@@ -246,36 +306,7 @@ def execute_in_terminal(
     if not sync:
         return ''
 
-    # Wait for command to complete by watching for a new prompt
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        time.sleep(poll_interval)
-        content = _capture_screen(session_name)
-        result = get_last_command(content)
-        if result is None:
-            continue
-        # Check if command finished (new prompt appeared with no command)
-        lines = content.rstrip('\n').split('\n')
-        for line in reversed(lines):
-            if not line.strip():
-                continue
-            # If last non-empty line has prompt arrow but no command after it,
-            # the command has completed
-            if PROMPT_ARROW in line:
-                parts = line.split(PROMPT_ARROW, 1)
-                after_arrow = parts[1].strip() if len(parts) > 1 else ''
-                tokens = after_arrow.split()
-                # Skip directory and optional git info
-                cmd_start = 1
-                if len(tokens) > 1 and tokens[1].startswith('git:('):
-                    cmd_start = 2
-                remaining = tokens[cmd_start:] if len(tokens) > cmd_start else []
-                if not remaining:
-                    # Command finished, return output
-                    return result.output
-            break
-
-    return None  # Timeout
+    return wait_for_command_completion(session_name, timeout, poll_interval)
 
 
 def get_last_command(terminal_output: str) -> CommandOutput | None:
