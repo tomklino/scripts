@@ -29,7 +29,7 @@ SCREEN_SETTINGS = [
 ]
 
 # PS1 prompt with kube_ps1 and the special arrow
-SCREEN_PS1 = r"$(kube_ps1)%(?:%{%}%1{__>%} :%{%}%1{>%} ) %{%}%c%{%} "
+SCREEN_PS1 = r"$(kube_ps1)%(?:%{%}%1{__>%} :%{%}%1{__>%} ) %{%}%c%{%} "
 
 
 def create_screen_session(session_name: str) -> bool:
