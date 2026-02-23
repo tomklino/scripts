@@ -198,8 +198,10 @@ def send_to_terminal(
             verify_string=prompt_verify_string) == False:
                 return False
 
+    # Escape newlines to prevent command execution
+    escaped_command = command.replace('\n', '\\\n')
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', f'{command}'],
+        ['screen', '-S', session_name, '-X', 'stuff', escaped_command],
         capture_output=True,
         text=True
     )
