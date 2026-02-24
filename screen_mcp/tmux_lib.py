@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# tmux_lib.py
 
 import os
 import re
@@ -8,135 +8,89 @@ import tempfile
 import time
 from typing import NamedTuple
 
+# This special prompt arrow is used to reliably find command prompts.
 PROMPT_ARROW = '__>'
-
 
 class CommandOutput(NamedTuple):
     prompt: str
     command: str
     output: str
 
-
 class PromptVerificationError(Exception):
     """Raised when terminal prompt verification fails."""
     pass
 
+# PS1 prompt to be set in the tmux session.
+TMUX_PS1 = r"$(kube_ps1)%(?:%{%}%1{__>%} :%{%}%1{__>%} ) %{%}%c%{%} "
 
-SCREEN_SETTINGS = [
-    'termcapinfo xterm* ti@:te@',
-    'defscrollback 250000',
-    'defutf8 on',
-]
-
-# PS1 prompt with kube_ps1 and the special arrow
-SCREEN_PS1 = r"$(kube_ps1)%(?:%{%}%1{__>%} :%{%}%1{__>%} ) %{%}%c%{%} "
-
-
-def create_screen_session(session_name: str) -> bool:
+def create_tmux_session(session_name: str) -> bool:
     """
-    Create a new attached screen session with predefined settings and PS1.
-
+    Create a new detached tmux session with predefined settings and PS1.
     Args:
-        session_name: Name for the screen session
-
+        session_name: Name for the tmux session
     Returns:
         True if session was created successfully, False otherwise
     """
-    import threading
-    import time
+    # Create a new detached session
+    create_result = subprocess.run(
+        ['tmux', 'new-session', '-d', '-s', session_name],
+        capture_output=True,
+        text=True
+    )
+    if create_result.returncode != 0:
+        print(f"Failed to create tmux session: {create_result.stderr}", file=sys.stderr)
+        return False
 
-    # Create temporary screenrc with settings
-    screenrc_content = '\n'.join(SCREEN_SETTINGS)
+    # Set scrollback buffer size
+    subprocess.run(
+        ['tmux', 'set-option', '-g', 'history-limit', '250000'],
+        capture_output=True,
+        text=True
+    )
 
-    with tempfile.NamedTemporaryFile(
-        mode='w', suffix='.screenrc', delete=False
-    ) as f:
-        f.write(screenrc_content)
-        tmp_screenrc = f.name
+    # Enable mouse mode
+    subprocess.run(
+        ['tmux', 'set-option', '-g', 'mouse', 'on'],
+        capture_output=True,
+        text=True
+    )
 
-    def stuff_ps1():
-        """Wait for session to start, then stuff the PS1 export."""
-        time.sleep(0.5)
-        ps1_export = "export PS1='" + SCREEN_PS1 + "'\n"
-        subprocess.run(
-            ['screen', '-S', session_name, '-X', 'stuff', ps1_export],
-            capture_output=True,
-            text=True
-        )
+    # Set the PS1 prompt
+    ps1_export = f"export PS1='{TMUX_PS1}'\n"
+    subprocess.run(
+        ['tmux', 'send-keys', '-t', session_name, ps1_export],
+        capture_output=True,
+        text=True
+    )
 
-    try:
-        # Start thread to stuff PS1 after session starts
-        stuff_thread = threading.Thread(target=stuff_ps1)
-        stuff_thread.start()
+    return True
 
-        # Create attached session (blocks until user exits)
-        result = subprocess.run(
-            ['screen', '-c', tmp_screenrc, '-S', session_name]
-        )
-
-        stuff_thread.join()
-        return result.returncode == 0
-    finally:
-        os.unlink(tmp_screenrc)
-
-
-def _capture_screen(session_name: str, timeout: float = 2.0) -> str:
+def _capture_pane(session_name: str) -> str:
     """
-    Capture the current screen content using hardcopy.
-
+    Capture the current pane content.
     Args:
-        session_name: Name of the screen session
-        timeout: Max time to wait for hardcopy file (seconds)
-
+        session_name: Name of the tmux session
     Returns:
-        The captured screen content as a string
+        The captured pane content as a string
     """
-    tmp_file = f"/tmp/screen_hardcopy_{os.getpid()}.txt"
-
-    if os.path.exists(tmp_file):
-        os.unlink(tmp_file)
-
-    try:
-        subprocess.run(
-            ['screen', '-S', session_name, '-X', 'hardcopy', '-h', tmp_file],
-            capture_output=True,
-            text=True
-        )
-
-        # Wait for file size to stabilize
-        start = time.time()
-        last_size = -1
-        while time.time() - start < timeout:
-            if os.path.exists(tmp_file):
-                current_size = os.path.getsize(tmp_file)
-                if current_size > 0 and current_size == last_size:
-                    break
-                last_size = current_size
-            time.sleep(0.05)
-
-        with open(tmp_file, encoding='utf-8', errors='replace') as f:
-            raw = f.read()
-
-        # Strip null bytes
-        return raw #.replace("\x00", "")
-    finally:
-        blah = 1
-        # if os.path.exists(tmp_file):
-        #     os.unlink(tmp_file)
-
+    result = subprocess.run(
+        ['tmux', 'capture-pane', '-p', '-t', session_name],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    return result.stdout
 
 def get_n_last_lines(session_name: str, lines: int = 10) -> str:
     """
     Get the last N lines from the terminal.
-
     Args:
-        session_name: Name of the screen session
+        session_name: Name of the tmux session
         lines: Number of lines to return (default: 10)
-
     Returns:
         The last N lines as a string
     """
-    content = _capture_screen(session_name)
+    content = _capture_pane(session_name)
     content_lines = content.split('\n')
 
     # Strip control characters from each line
@@ -163,9 +117,16 @@ def get_n_last_lines(session_name: str, lines: int = 10) -> str:
 
     return '\n'.join(trimmed[-lines:])
 
-
 def _verify_terminal_prompt(session_name: str, verify_string: str) -> bool:
-    content = _capture_screen(session_name)
+    """
+    Verify if the terminal prompt contains a specific string.
+    Args:
+        session_name: Name of the tmux session
+        verify_string: String to check for in the prompt
+    Returns:
+        True if the string is found, False otherwise
+    """
+    content = _capture_pane(session_name)
     lines = content.rstrip('\n').split('\n')
     # Check the last non-empty line for prompt
     last_line = ''
@@ -183,44 +144,39 @@ def send_to_terminal(
 ) -> bool:
     """
     Send a command to the terminal without waiting for completion.
-
     Args:
-        session_name: Name of the screen session
+        session_name: Name of the tmux session
         command: Command to send
         prompt_verify_string: If provided, only send if prompt contains this
-
     Returns:
         True if command was sent, False if prompt verification failed
     """
     if prompt_verify_string is not None:
-        if _verify_terminal_prompt(
+        if not _verify_terminal_prompt(
             session_name=session_name,
-            verify_string=prompt_verify_string) == False:
-                return False
+            verify_string=prompt_verify_string
+        ):
+            return False
 
-    # Escape newlines to prevent command execution
-    escaped_command = command.replace('\n', '\\\n')
+    # In tmux, send-keys sends keys, so no need to escape newlines
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', escaped_command],
+        ['tmux', 'send-keys', '-t', session_name, command],
         capture_output=True,
         text=True
     )
     return True
 
-
 def send_interrupt(session_name: str) -> None:
     """
     Send CTRL+C interrupt to the terminal.
-
     Args:
-        session_name: Name of the screen session
+        session_name: Name of the tmux session
     """
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', '\x03'],
+        ['tmux', 'send-keys', '-t', session_name, 'C-c'],
         capture_output=True,
         text=True
     )
-
 
 def wait_for_command_completion(
     session_name: str,
@@ -229,19 +185,17 @@ def wait_for_command_completion(
 ) -> str | None:
     """
     Wait for a command to complete by polling for a new empty prompt.
-
     Args:
-        session_name: Name of the screen session
+        session_name: Name of the tmux session
         timeout: Maximum time to wait for command completion (seconds)
         poll_interval: How often to check for completion (seconds)
-
     Returns:
         Command output if completed, None if timeout
     """
     start_time = time.time()
     while time.time() - start_time < timeout:
         time.sleep(poll_interval)
-        content = _capture_screen(session_name)
+        content = _capture_pane(session_name)
         result = get_last_command(content)
         if result is None:
             continue
@@ -278,15 +232,13 @@ def execute_in_terminal(
 ) -> str | None:
     """
     Execute a command in the terminal.
-
     Args:
-        session_name: Name of the screen session
+        session_name: Name of the tmux session
         command: Command to execute
         prompt_verify_string: If provided, only execute if prompt contains this
         sync: If True, wait for command to finish and return output
         timeout: Maximum time to wait for command completion (seconds)
         poll_interval: How often to check for completion (seconds)
-
     Returns:
         If sync=True: Full output including prompts, or None if verification
             failed or timeout
@@ -301,7 +253,7 @@ def execute_in_terminal(
             )
 
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', command + '\n'],
+        ['tmux', 'send-keys', '-t', session_name, command + '\n'],
         capture_output=True,
         text=True
     )
@@ -310,14 +262,11 @@ def execute_in_terminal(
 
     return wait_for_command_completion(session_name, timeout, poll_interval)
 
-
 def get_last_command(terminal_output: str) -> CommandOutput | None:
     """
     Extract the last command and its output from terminal output.
-
     Args:
         terminal_output: Raw terminal output string
-
     Returns:
         CommandOutput with prompt, command, and output, or None if not found
     """
@@ -363,10 +312,9 @@ def get_last_command(terminal_output: str) -> CommandOutput | None:
 
     return CommandOutput(prompt=prompt, command=command, output=output)
 
-
 def main():
     if len(sys.argv) < 2:
-        print("Usage: terminal_parser.py <file> | -", file=sys.stderr)
+        print("Usage: tmux_lib.py <file> | -", file=sys.stderr)
         sys.exit(1)
 
     source = sys.argv[1]
@@ -382,7 +330,6 @@ def main():
         sys.exit(1)
 
     print(result.output)
-
 
 if __name__ == '__main__':
     main()
