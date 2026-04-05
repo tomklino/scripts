@@ -15,6 +15,7 @@ class CommandOutput(NamedTuple):
     prompt: str
     command: str
     output: str
+    status: str  # "free", "running", or "interactive"
 
 
 class PromptVerificationError(Exception):
@@ -236,34 +237,21 @@ def wait_for_command_completion(
         Command output if completed, None if timeout
     """
     start_time = time.time()
+    last_output = None
     while time.time() - start_time < timeout:
         time.sleep(poll_interval)
-        content = _capture_screen(session_name)
+
         result = get_last_command(session_name)
         if result is None:
             continue
-        # Check if command finished (new prompt appeared with no command)
-        lines = content.rstrip("\n").split("\n")
-        for line in reversed(lines):
-            if not line.strip():
-                continue
-            # If last non-empty line has prompt arrow but no command after it,
-            # the command has completed
-            if PROMPT_ARROW in line:
-                parts = line.split(PROMPT_ARROW, 1)
-                after_arrow = parts[1].strip() if len(parts) > 1 else ""
-                tokens = after_arrow.split()
-                # Skip directory and optional git info
-                cmd_start = 1
-                if len(tokens) > 1 and tokens[1].startswith("git:("):
-                    cmd_start = 2
-                remaining = tokens[cmd_start:] if len(tokens) > cmd_start else []
-                if not remaining:
-                    # Command finished, return output
-                    return result.output
-            break
 
-    return None  # Timeout
+        if result.status == "free":
+            return result.output
+
+        # Command still running - store output for potential return
+        last_output = result.output
+
+    return last_output  # Return last captured output on timeout
 
 
 def execute_in_terminal(
@@ -351,16 +339,18 @@ def get_last_command(session_name: str) -> CommandOutput | None:
     last_idx, last_prompt, last_command = prompt_indices[-1]
     if last_command:
         idx, prompt, command = last_idx, last_prompt, last_command
+        status = "running"
     elif len(prompt_indices) < 2:
         return None
     else:
         idx, prompt, command = prompt_indices[-2]
+        status = "free"
 
     # Output is everything from this prompt line to the end
     output_lines = lines[idx:]
     output = "\n".join(output_lines)
 
-    return CommandOutput(prompt=prompt, command=command, output=output)
+    return CommandOutput(prompt=prompt, command=command, output=output, status=status)
 
 
 def main():
