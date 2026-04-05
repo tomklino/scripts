@@ -32,9 +32,7 @@ def get_last_lines(session_name: str, lines: int = 10) -> str:
 
 @mcp.tool()
 def send_command(
-    session_name: str,
-    command: str,
-    prompt_verify_string: str | None = None
+    session_name: str, command: str, prompt_verify_string: str | None = None
 ) -> str:
     """
     Send a command to the terminal without executing it.
@@ -78,7 +76,7 @@ def execute_command(
     session_name: str,
     command: str,
     timeout: float = 30.0,
-    prompt_verify_string: str | None = None
+    prompt_verify_string: str | None = None,
 ) -> str:
     """
     Execute a command in the terminal and wait for it to complete.
@@ -105,7 +103,7 @@ def execute_command(
             command,
             prompt_verify_string=prompt_verify_string,
             sync=True,
-            timeout=timeout
+            timeout=timeout,
         )
         return result if result is not None else "timeout"
     except screen_lib.PromptVerificationError:
@@ -113,10 +111,7 @@ def execute_command(
 
 
 @mcp.tool()
-def wait_for_completion(
-    session_name: str,
-    timeout: float = 30.0
-) -> str:
+def wait_for_completion(session_name: str, timeout: float = 30.0) -> str:
     """
     Wait for a previously sent command to complete.
 
@@ -151,15 +146,10 @@ def get_last_command_output(session_name: str) -> dict:
         Dictionary with 'prompt', 'command', and 'output' keys,
         or {'error': 'no_command_found'} if no command was detected
     """
-    content = screen_lib._capture_screen(session_name)
-    result = screen_lib.get_last_command(content)
+    result = screen_lib.get_last_command(session_name)
     if result is None:
         return {"error": "no_command_found"}
-    return {
-        "prompt": result.prompt,
-        "command": result.command,
-        "output": result.output
-    }
+    return {"prompt": result.prompt, "command": result.command, "output": result.output}
 
 
 if __name__ == "__main__":

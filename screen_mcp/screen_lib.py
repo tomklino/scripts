@@ -8,7 +8,7 @@ import tempfile
 import time
 from typing import NamedTuple
 
-PROMPT_ARROW = '__>'
+PROMPT_ARROW = "__>"
 
 
 class CommandOutput(NamedTuple):
@@ -19,13 +19,14 @@ class CommandOutput(NamedTuple):
 
 class PromptVerificationError(Exception):
     """Raised when terminal prompt verification fails."""
+
     pass
 
 
 SCREEN_SETTINGS = [
-    'termcapinfo xterm* ti@:te@',
-    'defscrollback 250000',
-    'defutf8 on',
+    "termcapinfo xterm* ti@:te@",
+    "defscrollback 250000",
+    "defutf8 on",
 ]
 
 # PS1 prompt with kube_ps1 and the special arrow
@@ -46,11 +47,9 @@ def create_screen_session(session_name: str) -> bool:
     import time
 
     # Create temporary screenrc with settings
-    screenrc_content = '\n'.join(SCREEN_SETTINGS)
+    screenrc_content = "\n".join(SCREEN_SETTINGS)
 
-    with tempfile.NamedTemporaryFile(
-        mode='w', suffix='.screenrc', delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".screenrc", delete=False) as f:
         f.write(screenrc_content)
         tmp_screenrc = f.name
 
@@ -59,9 +58,9 @@ def create_screen_session(session_name: str) -> bool:
         time.sleep(0.5)
         ps1_export = "export PS1='" + SCREEN_PS1 + "'\n"
         subprocess.run(
-            ['screen', '-S', session_name, '-X', 'stuff', ps1_export],
+            ["screen", "-S", session_name, "-X", "stuff", ps1_export],
             capture_output=True,
-            text=True
+            text=True,
         )
 
     try:
@@ -70,9 +69,7 @@ def create_screen_session(session_name: str) -> bool:
         stuff_thread.start()
 
         # Create attached session (blocks until user exits)
-        result = subprocess.run(
-            ['screen', '-c', tmp_screenrc, '-S', session_name]
-        )
+        result = subprocess.run(["screen", "-c", tmp_screenrc, "-S", session_name])
 
         stuff_thread.join()
         return result.returncode == 0
@@ -98,9 +95,9 @@ def _capture_screen(session_name: str, timeout: float = 2.0) -> str:
 
     try:
         subprocess.run(
-            ['screen', '-S', session_name, '-X', 'hardcopy', '-h', tmp_file],
+            ["screen", "-S", session_name, "-X", "hardcopy", "-h", tmp_file],
             capture_output=True,
-            text=True
+            text=True,
         )
 
         # Wait for file size to stabilize
@@ -114,11 +111,11 @@ def _capture_screen(session_name: str, timeout: float = 2.0) -> str:
                 last_size = current_size
             time.sleep(0.05)
 
-        with open(tmp_file, encoding='utf-8', errors='replace') as f:
+        with open(tmp_file, encoding="utf-8", errors="replace") as f:
             raw = f.read()
 
         # Strip null bytes
-        return raw #.replace("\x00", "")
+        return raw  # .replace("\x00", "")
     finally:
         blah = 1
         # if os.path.exists(tmp_file):
@@ -137,12 +134,12 @@ def get_n_last_lines(session_name: str, lines: int = 10) -> str:
         The last N lines as a string
     """
     content = _capture_screen(session_name)
-    content_lines = content.split('\n')
+    content_lines = content.split("\n")
 
     # Strip control characters from each line
     cleaned_lines = []
     for line in content_lines:
-        cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', line)
+        cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", "", line)
         cleaned_lines.append(cleaned)
 
     # Find first and last non-empty lines to trim padding
@@ -159,16 +156,16 @@ def get_n_last_lines(session_name: str, lines: int = 10) -> str:
             break
 
     # Get content between first and last non-empty lines (inclusive)
-    trimmed = cleaned_lines[first_content:last_content + 1]
+    trimmed = cleaned_lines[first_content : last_content + 1]
 
-    return '\n'.join(trimmed[-lines:])
+    return "\n".join(trimmed[-lines:])
 
 
 def _verify_terminal_prompt(session_name: str, verify_string: str) -> bool:
     content = _capture_screen(session_name)
-    lines = content.rstrip('\n').split('\n')
+    lines = content.rstrip("\n").split("\n")
     # Check the last non-empty line for prompt
-    last_line = ''
+    last_line = ""
     for line in reversed(lines):
         if line.strip():
             last_line = line
@@ -176,10 +173,9 @@ def _verify_terminal_prompt(session_name: str, verify_string: str) -> bool:
 
     return verify_string in last_line
 
+
 def send_to_terminal(
-    session_name: str,
-    command: str,
-    prompt_verify_string: str | None = None
+    session_name: str, command: str, prompt_verify_string: str | None = None
 ) -> bool:
     """
     Send a command to the terminal without waiting for completion.
@@ -193,17 +189,20 @@ def send_to_terminal(
         True if command was sent, False if prompt verification failed
     """
     if prompt_verify_string is not None:
-        if _verify_terminal_prompt(
-            session_name=session_name,
-            verify_string=prompt_verify_string) == False:
-                return False
+        if (
+            _verify_terminal_prompt(
+                session_name=session_name, verify_string=prompt_verify_string
+            )
+            == False
+        ):
+            return False
 
     # Escape newlines to prevent command execution
-    escaped_command = command.replace('\n', '\\\n')
+    escaped_command = command.replace("\n", "\\\n")
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', escaped_command],
+        ["screen", "-S", session_name, "-X", "stuff", escaped_command],
         capture_output=True,
-        text=True
+        text=True,
     )
     return True
 
@@ -216,16 +215,14 @@ def send_interrupt(session_name: str) -> None:
         session_name: Name of the screen session
     """
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', '\x03'],
+        ["screen", "-S", session_name, "-X", "stuff", "\x03"],
         capture_output=True,
-        text=True
+        text=True,
     )
 
 
 def wait_for_command_completion(
-    session_name: str,
-    timeout: float = 30,
-    poll_interval: float = 0.001
+    session_name: str, timeout: float = 30, poll_interval: float = 0.001
 ) -> str | None:
     """
     Wait for a command to complete by polling for a new empty prompt.
@@ -242,11 +239,11 @@ def wait_for_command_completion(
     while time.time() - start_time < timeout:
         time.sleep(poll_interval)
         content = _capture_screen(session_name)
-        result = get_last_command(content)
+        result = get_last_command(session_name)
         if result is None:
             continue
         # Check if command finished (new prompt appeared with no command)
-        lines = content.rstrip('\n').split('\n')
+        lines = content.rstrip("\n").split("\n")
         for line in reversed(lines):
             if not line.strip():
                 continue
@@ -254,11 +251,11 @@ def wait_for_command_completion(
             # the command has completed
             if PROMPT_ARROW in line:
                 parts = line.split(PROMPT_ARROW, 1)
-                after_arrow = parts[1].strip() if len(parts) > 1 else ''
+                after_arrow = parts[1].strip() if len(parts) > 1 else ""
                 tokens = after_arrow.split()
                 # Skip directory and optional git info
                 cmd_start = 1
-                if len(tokens) > 1 and tokens[1].startswith('git:('):
+                if len(tokens) > 1 and tokens[1].startswith("git:("):
                     cmd_start = 2
                 remaining = tokens[cmd_start:] if len(tokens) > cmd_start else []
                 if not remaining:
@@ -268,13 +265,14 @@ def wait_for_command_completion(
 
     return None  # Timeout
 
+
 def execute_in_terminal(
     session_name: str,
     command: str,
     prompt_verify_string: str | None = None,
     sync: bool = True,
     timeout: float = 30.0,
-    poll_interval: float = 0.001
+    poll_interval: float = 0.001,
 ) -> str | None:
     """
     Execute a command in the terminal.
@@ -294,34 +292,35 @@ def execute_in_terminal(
     """
     if prompt_verify_string is not None:
         if not _verify_terminal_prompt(
-            session_name=session_name,
-            verify_string=prompt_verify_string):
+            session_name=session_name, verify_string=prompt_verify_string
+        ):
             raise PromptVerificationError(
                 f"Prompt does not contain '{prompt_verify_string}'"
             )
 
     subprocess.run(
-        ['screen', '-S', session_name, '-X', 'stuff', command + '\n'],
+        ["screen", "-S", session_name, "-X", "stuff", command + "\n"],
         capture_output=True,
-        text=True
+        text=True,
     )
     if not sync:
-        return ''
+        return ""
 
     return wait_for_command_completion(session_name, timeout, poll_interval)
 
 
-def get_last_command(terminal_output: str) -> CommandOutput | None:
+def get_last_command(session_name: str) -> CommandOutput | None:
     """
     Extract the last command and its output from terminal output.
 
     Args:
-        terminal_output: Raw terminal output string
+        session_name: Name of the screen session
 
     Returns:
         CommandOutput with prompt, command, and output, or None if not found
     """
-    lines = terminal_output.strip().split('\n')
+    terminal_output = _capture_screen(session_name)
+    lines = terminal_output.strip().split("\n")
 
     # Find all prompt line indices (lines containing the prompt arrow)
     prompt_indices = []
@@ -330,18 +329,18 @@ def get_last_command(terminal_output: str) -> CommandOutput | None:
             continue
         # Split on the arrow and take everything after it
         parts = line.split(PROMPT_ARROW, 1)
-        after_arrow = parts[1] if len(parts) > 1 else ''
+        after_arrow = parts[1] if len(parts) > 1 else ""
         # Extract prompt (directory/git info) and command
         tokens = after_arrow.strip().split()
         if not tokens:
-            prompt_indices.append((i, '', ''))
+            prompt_indices.append((i, "", ""))
             continue
         # Find where command starts (after dir and optional git:(branch))
         cmd_start = 1
-        if len(tokens) > 1 and tokens[1].startswith('git:('):
+        if len(tokens) > 1 and tokens[1].startswith("git:("):
             cmd_start = 2
-        prompt = PROMPT_ARROW + ' ' + ' '.join(tokens[:cmd_start])
-        command = ' '.join(tokens[cmd_start:])
+        prompt = PROMPT_ARROW + " " + " ".join(tokens[:cmd_start])
+        command = " ".join(tokens[cmd_start:])
         prompt_indices.append((i, prompt, command))
 
     if not prompt_indices:
@@ -359,24 +358,19 @@ def get_last_command(terminal_output: str) -> CommandOutput | None:
 
     # Output is everything from this prompt line to the end
     output_lines = lines[idx:]
-    output = '\n'.join(output_lines)
+    output = "\n".join(output_lines)
 
     return CommandOutput(prompt=prompt, command=command, output=output)
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: terminal_parser.py <file> | -", file=sys.stderr)
+        print("Usage: screen_lib.py <session_name>", file=sys.stderr)
         sys.exit(1)
 
-    source = sys.argv[1]
-    if source == '-':
-        terminal_output = sys.stdin.read()
-    else:
-        with open(source, encoding='utf-8', errors='replace') as f:
-            terminal_output = f.read()
+    session_name = sys.argv[1]
 
-    result = get_last_command(terminal_output)
+    result = get_last_command(session_name)
     if result is None:
         print("No command found", file=sys.stderr)
         sys.exit(1)
@@ -384,5 +378,5 @@ def main():
     print(result.output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

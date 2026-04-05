@@ -6,7 +6,18 @@ When interacting with tmux sessions:
 * "execute" or "run" a command = use `mcp__tmux__execute_command` (waits
   for completion and returns output)
 
-### Prompt Verification
+### SAFETY: Prompt Verification
+
+DO NOT EXECUTE ANY COMMANDS USING TMUX WITHOUT FIRST VERIFYING WHAT THE
+`prompt_verify_string` SHOULD BE!
+
+To check what the `prompt_verify_string` should be
+1. read the last few lines from the terminal
+2. verify the prompt line matches what the user requested
+3. set the `prompt_verify_string` of subsequent commands to the relavent
+  part of the current prompt based on the user's request
+
+ALWAYS SET A `prompt_verify_string` when executing a command in a tmux session
 
 Use `prompt_verify_string` to verify the terminal state before executing
 commands:
