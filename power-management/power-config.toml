@@ -1,0 +1,19 @@
+# Power Management Configuration
+# This file controls the hybrid suspend logic for laptops
+
+[idle]
+action = "suspend"           # Options: suspend, hibernate, ignore, poweroff, reboot
+timeout_minutes = 20         # Minutes of inactivity before idle action triggers
+
+[lid_close_suspend]
+enabled = true               # Enable immediate suspend on lid close conditions
+on_battery = true            # Suspend immediately when on battery
+require_no_external_monitor = true  # Only suspend if no external monitor connected
+
+[ac_inhibit]
+enabled = true               # Block idle suspend when on AC power
+check_interval_seconds = 60  # How often to check AC status
+
+[services]
+auto_enable = true           # Automatically enable services on install
+auto_start = true            # Start services immediately after install
