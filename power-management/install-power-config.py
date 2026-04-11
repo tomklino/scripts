@@ -18,7 +18,6 @@ import logging
 import subprocess
 import sys
 import os
-import re
 from pathlib import Path
 from string import Template
 
@@ -31,7 +30,7 @@ DEFAULT_CONFIG = SCRIPT_DIR / "power-config.toml"
 TEMPLATES_DIR = SCRIPT_DIR / "templates"
 
 TARGET_FILES = {
-    "logind": Path("/etc/systemd/logind.conf"),
+    "logind_dropin": Path("/etc/systemd/logind.conf.d/power-management.conf"),
     "power_logic": Path("/usr/local/bin/power-logic.sh"),
     "udev_rules": Path("/etc/udev/rules.d/99-power-rules.rules"),
     "ac_inhibit_script": Path("/usr/local/bin/ac-inhibit.sh"),
@@ -91,11 +90,6 @@ def parse_toml(content: str) -> dict:
     return result
 
 
-def run_cmd(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
-    """Run a shell command."""
-    return subprocess.run(cmd, check=check, capture_output=True, text=True)
-
-
 def load_config(config_path: Path) -> dict:
     """Load configuration from TOML file."""
     if not config_path.exists():
@@ -125,268 +119,240 @@ class PowerConfigInstaller:
         self.config = config
         self.dry_run = dry_run
 
+        # Set action functions based on dry_run
+        if dry_run:
+            self.write_file = self._write_file_dry
+            self.remove_file = self._remove_file_dry
+            self.mkdir = self._mkdir_dry
+            self.run_cmd = self._run_cmd_dry
+            self.log_action = self._log_action_dry
+        else:
+            self.write_file = self._write_file_wet
+            self.remove_file = self._remove_file_wet
+            self.mkdir = self._mkdir_wet
+            self.run_cmd = self._run_cmd_wet
+            self.log_action = self._log_action_wet
+
+    # === DRY RUN ACTIONS ===
+
+    def _write_file_dry(self, target: Path, content: str, mode: int = 0o644) -> None:
+        log.info("")
+        log.info("=" * 60)
+        log.info(f"# Target: {target}")
+        log.info("=" * 60)
+        log.info(content.rstrip())
+        log.info("")
+
+    def _remove_file_dry(self, target: Path) -> None:
+        log.info(f"Would remove: {target}")
+
+    def _mkdir_dry(self, target: Path, parents: bool = True) -> None:
+        log.info(f"Would create directory: {target}")
+
+    def _run_cmd_dry(self, cmd: list, check: bool = True) -> subprocess.CompletedProcess:
+        log.info(f"Would run: {' '.join(cmd)}")
+        # Return a fake CompletedProcess for compatibility
+        return subprocess.CompletedProcess(cmd, returncode=0, stdout="", stderr="")
+
+    def _log_action_dry(self, message: str) -> None:
+        log.info(f"[DRY] {message}")
+
+    # === WET (REAL) ACTIONS ===
+
+    def _write_file_wet(self, target: Path, content: str, mode: int = 0o644) -> None:
+        target.write_text(content)
+        if mode != 0o644:
+            target.chmod(mode)
+
+    def _remove_file_wet(self, target: Path) -> None:
+        if target.exists():
+            target.unlink()
+
+    def _mkdir_wet(self, target: Path, parents: bool = True) -> None:
+        target.mkdir(parents=parents, exist_ok=True)
+
+    def _run_cmd_wet(self, cmd: list, check: bool = True) -> subprocess.CompletedProcess:
+        return subprocess.run(cmd, check=check, capture_output=True, text=True)
+
+    def _log_action_wet(self, message: str) -> None:
+        log.debug(message)
+
+    # === INSTALLER METHODS ===
+
     def ensure_sudo(self) -> None:
-        """Ensure script is running as root."""
         if self.dry_run:
-            log.debug("Skipping sudo check (dry-run)")
+            self.log_action("Skipping sudo check (dry-run)")
             return
         if os.geteuid() != 0:
             log.error("This script must be run as root (use sudo)")
             sys.exit(1)
 
-    def print_dry_run(self, target: Path, content: str) -> None:
-        """Print rendered content for dry-run mode."""
-        print(f"\n{'=' * 60}")
-        print(f"# Target: {target}")
-        print(f"{'=' * 60}")
-        print(content.rstrip())
-        print()
-
     def configure_logind(self) -> None:
-        """Configure idle timer in logind.conf using template."""
+        """Configure idle timer via logind drop-in."""
         idle_config = self.config.get("idle", {})
 
         action = idle_config.get("action", "suspend")
         timeout = idle_config.get("timeout_minutes", 20)
 
-        log.debug(f"Configuring logind.conf: IdleAction={action}, IdleActionSec={timeout}min")
+        self.log_action(f"Configuring logind: IdleAction={action}, IdleActionSec={timeout}min")
 
-        # Render template
         rendered = render_template("logind.conf.tpl", {
             "idle_action": action,
             "idle_timeout": timeout
         })
 
-        if self.dry_run:
-            self.print_dry_run(TARGET_FILES["logind"], rendered)
-            return
-
-        # Read current logind.conf content
-        target = TARGET_FILES["logind"]
-        current_content = target.read_text() if target.exists() else ""
-
-        # Update or append settings in logind.conf
-        for line in rendered.strip().split("\n"):
-            if line.startswith("#") or not line.strip():
-                continue
-
-            key = line.split("=")[0]
-            if key in current_content:
-                # Replace existing line (commented or not)
-                pattern = rf"^#?{key}=.*$"
-                current_content = re.sub(pattern, line, current_content, flags=re.MULTILINE)
-            else:
-                # Append new setting
-                current_content += f"\n{line}\n"
-
-        target.write_text(current_content)
-        log.debug("logind.conf updated")
+        self.mkdir(TARGET_FILES["logind_dropin"].parent)
+        self.write_file(TARGET_FILES["logind_dropin"], rendered)
 
     def create_power_logic_script(self) -> None:
-        """Create the power-logic.sh script using template."""
+        """Create the power-logic.sh script to immediately suspend when unlugged and lid is closed."""
         lid_config = self.config.get("lid_close_suspend", {})
 
         if not lid_config.get("enabled", True):
-            log.debug("Skipping power-logic.sh (lid_close_suspend disabled)")
-            if not self.dry_run:
-                target = TARGET_FILES["power_logic"]
-                if target.exists():
-                    target.unlink()
-                    log.debug("Removed existing power-logic.sh")
+            self.log_action("Skipping power-logic.sh (lid_close_suspend disabled)")
+            self.remove_file(TARGET_FILES["power_logic"])
             return
 
         on_battery = lid_config.get("on_battery", True)
         require_no_ext = lid_config.get("require_no_external_monitor", True)
 
-        log.debug(f"Creating power-logic.sh (on_battery={on_battery}, require_no_external_monitor={require_no_ext})")
+        self.log_action(f"Creating power-logic.sh (on_battery={on_battery}, require_no_external_monitor={require_no_ext})")
 
-        # Build condition string
-        conditions = []
-        if on_battery:
-            conditions.append('[ "$ON_AC" -eq 0 ]')
-        if require_no_ext:
-            conditions.append('[ "$EXT_SCREEN" -eq 0 ]')
+        rendered = render_template("power-logic.sh.tpl", {
+            "on_battery": "true" if on_battery else "false",
+            "require_no_external_monitor": "true" if require_no_ext else "false"
+        })
 
-        condition_str = " && ".join(conditions) if conditions else "true"
-
-        rendered = render_template("power-logic.sh.tpl", {"condition_str": condition_str})
-
-        if self.dry_run:
-            self.print_dry_run(TARGET_FILES["power_logic"], rendered)
-            return
-
-        target = TARGET_FILES["power_logic"]
-        target.write_text(rendered)
-        target.chmod(0o755)
-        log.debug("power-logic.sh created")
+        self.write_file(TARGET_FILES["power_logic"], rendered, mode=0o755)
 
     def create_udev_rules(self) -> None:
-        """Create udev rules using template."""
+        """Create udev rules to run power logic when relevant changes are detected."""
         lid_config = self.config.get("lid_close_suspend", {})
 
         if not lid_config.get("enabled", True):
-            log.debug("Skipping udev rules (lid_close_suspend disabled)")
-            if not self.dry_run:
-                target = TARGET_FILES["udev_rules"]
-                if target.exists():
-                    target.unlink()
-                    log.debug("Removed existing udev rules")
+            self.log_action("Skipping udev rules (lid_close_suspend disabled)")
+            self.remove_file(TARGET_FILES["udev_rules"])
             return
 
-        log.debug("Creating udev rules")
+        self.log_action("Creating udev rules")
 
         rendered = render_template("udev-rules.rules.tpl", {})
 
-        if self.dry_run:
-            self.print_dry_run(TARGET_FILES["udev_rules"], rendered)
-            return
-
-        target = TARGET_FILES["udev_rules"]
-        target.write_text(rendered)
-        log.debug("udev rules created")
+        self.write_file(TARGET_FILES["udev_rules"], rendered)
 
     def create_ac_inhibit_script(self) -> None:
-        """Create the ac-inhibit.sh script using template."""
+        """Create the ac-inhibit.sh script to prevent suspension when plugged in."""
         inhibit_config = self.config.get("ac_inhibit", {})
 
         if not inhibit_config.get("enabled", True):
-            log.debug("Skipping ac-inhibit.sh (ac_inhibit disabled)")
-            if not self.dry_run:
-                target = TARGET_FILES["ac_inhibit_script"]
-                if target.exists():
-                    target.unlink()
-                    log.debug("Removed existing ac-inhibit.sh")
+            self.log_action("Skipping ac-inhibit.sh (ac_inhibit disabled)")
+            self.remove_file(TARGET_FILES["ac_inhibit_script"])
             return
 
         interval = inhibit_config.get("check_interval_seconds", 60)
 
-        log.debug(f"Creating ac-inhibit.sh (check_interval={interval}s)")
+        self.log_action(f"Creating ac-inhibit.sh (check_interval={interval}s)")
 
         rendered = render_template("ac-inhibit.sh.tpl", {"check_interval": interval})
 
-        if self.dry_run:
-            self.print_dry_run(TARGET_FILES["ac_inhibit_script"], rendered)
-            return
-
-        target = TARGET_FILES["ac_inhibit_script"]
-        target.write_text(rendered)
-        target.chmod(0o755)
-        log.debug("ac-inhibit.sh created")
+        self.write_file(TARGET_FILES["ac_inhibit_script"], rendered, mode=0o755)
 
     def create_ac_inhibit_service(self) -> None:
-        """Create the systemd service for ac-inhibit using template."""
+        """Create the systemd service for ac-inhibit."""
         inhibit_config = self.config.get("ac_inhibit", {})
 
         if not inhibit_config.get("enabled", True):
-            log.debug("Skipping ac-inhibit.service (ac_inhibit disabled)")
-            if not self.dry_run:
-                target = TARGET_FILES["ac_inhibit_service"]
-                if target.exists():
-                    target.unlink()
-                    log.debug("Removed existing ac-inhibit.service")
+            self.log_action("Skipping ac-inhibit.service (ac_inhibit disabled)")
+            self.remove_file(TARGET_FILES["ac_inhibit_service"])
             return
 
-        log.debug("Creating ac-inhibit.service")
+        self.log_action("Creating ac-inhibit.service")
 
         rendered = render_template("ac-inhibit.service.tpl", {})
 
-        if self.dry_run:
-            self.print_dry_run(TARGET_FILES["ac_inhibit_service"], rendered)
-            return
-
-        target = TARGET_FILES["ac_inhibit_service"]
-        target.write_text(rendered)
-        log.debug("ac-inhibit.service created")
+        self.write_file(TARGET_FILES["ac_inhibit_service"], rendered)
 
     def reload_and_enable_services(self) -> None:
         """Reload systemd, udev and enable services."""
-        if self.dry_run:
-            log.debug("Skipping service reload (dry-run)")
-            return
-
         services_config = self.config.get("services", {})
         auto_enable = services_config.get("auto_enable", True)
         auto_start = services_config.get("auto_start", True)
 
-        log.debug("Reloading system configurations...")
+        self.log_action("Reloading system configurations...")
 
-        run_cmd(["systemctl", "daemon-reload"])
-        log.debug("systemd daemon reloaded")
+        self.run_cmd(["systemctl", "daemon-reload"])
+        self.log_action("systemd daemon reloaded")
 
-        run_cmd(["udevadm", "control", "--reload-rules"])
-        run_cmd(["udevadm", "trigger"])
-        log.debug("udev rules reloaded")
+        self.run_cmd(["udevadm", "control", "--reload-rules"])
+        self.run_cmd(["udevadm", "trigger"])
+        self.log_action("udev rules reloaded")
 
-        run_cmd(["systemctl", "restart", "systemd-logind"])
-        log.debug("systemd-logind restarted")
+        self.run_cmd(["systemctl", "reload", "systemd-logind"])
+        self.log_action("systemd-logind reloaded")
 
         inhibit_config = self.config.get("ac_inhibit", {})
         if inhibit_config.get("enabled", True):
             if auto_enable:
-                run_cmd(["systemctl", "enable", "ac-inhibit.service"])
-                log.debug("ac-inhibit.service enabled")
+                self.run_cmd(["systemctl", "enable", "ac-inhibit.service"])
+                self.log_action("ac-inhibit.service enabled")
 
             if auto_start:
-                run_cmd(["systemctl", "restart", "ac-inhibit.service"])
-                log.debug("ac-inhibit.service started")
+                self.run_cmd(["systemctl", "restart", "ac-inhibit.service"])
+                self.log_action("ac-inhibit.service started")
         else:
-            run_cmd(["systemctl", "stop", "ac-inhibit.service"], check=False)
-            run_cmd(["systemctl", "disable", "ac-inhibit.service"], check=False)
-            log.debug("ac-inhibit.service stopped and disabled")
+            self.run_cmd(["systemctl", "stop", "ac-inhibit.service"], check=False)
+            self.run_cmd(["systemctl", "disable", "ac-inhibit.service"], check=False)
+            self.log_action("ac-inhibit.service stopped and disabled")
 
     def verify_installation(self) -> None:
         """Verify the installation."""
-        if self.dry_run:
-            log.debug("Skipping verification (dry-run)")
-            return
+        self.log_action("Verifying installation...")
 
-        log.debug("Verifying installation...")
-
-        result = run_cmd(["grep", "-E", "^(IdleAction|IdleActionSec)", str(TARGET_FILES["logind"])])
+        result = self.run_cmd(["grep", "-E", "^(IdleAction|IdleActionSec)", str(TARGET_FILES["logind_dropin"])])
         if result.returncode == 0:
-            log.debug("logind.conf configured:")
+            self.log_action("logind drop-in configured:")
             for line in result.stdout.strip().split("\n"):
-                log.debug(f"  {line}")
+                self.log_action(f"  {line}")
         else:
-            log.debug("logind.conf not configured")
+            self.log_action("logind drop-in not found")
 
         lid_config = self.config.get("lid_close_suspend", {})
         if lid_config.get("enabled", True):
             if TARGET_FILES["power_logic"].exists():
-                log.debug("power-logic.sh exists")
+                self.log_action("power-logic.sh exists")
             else:
-                log.debug("power-logic.sh missing")
+                self.log_action("power-logic.sh missing")
 
             if TARGET_FILES["udev_rules"].exists():
-                log.debug("udev rules exist")
+                self.log_action("udev rules exist")
             else:
-                log.debug("udev rules missing")
+                self.log_action("udev rules missing")
         else:
-            log.debug("lid_close_suspend disabled - skipping power-logic.sh verification")
+            self.log_action("lid_close_suspend disabled - skipping power-logic.sh verification")
 
         inhibit_config = self.config.get("ac_inhibit", {})
         if inhibit_config.get("enabled", True):
             if TARGET_FILES["ac_inhibit_script"].exists():
-                log.debug("ac-inhibit.sh exists")
+                self.log_action("ac-inhibit.sh exists")
             else:
-                log.debug("ac-inhibit.sh missing")
+                self.log_action("ac-inhibit.sh missing")
 
-            result = run_cmd(["systemctl", "is-active", "ac-inhibit.service"], check=False)
+            result = self.run_cmd(["systemctl", "is-active", "ac-inhibit.service"], check=False)
             if result.stdout.strip() == "active":
-                log.debug("ac-inhibit.service running")
+                self.log_action("ac-inhibit.service running")
             else:
-                log.debug("ac-inhibit.service not running")
+                self.log_action("ac-inhibit.service not running")
 
-            result = run_cmd(["systemd-inhibit", "--list", "--no-pager"], check=False)
+            result = self.run_cmd(["systemd-inhibit", "--list", "--no-pager"], check=False)
             if "idle" in result.stdout:
                 for line in result.stdout.split("\n"):
                     if "idle" in line.lower():
-                        log.debug(f"Idle inhibit active: {line.split()[0]}")
+                        self.log_action(f"Idle inhibit active: {line.split()[0]}")
                         break
             else:
-                log.debug("No idle inhibit currently active (may be on battery)")
+                self.log_action("No idle inhibit currently active (may be on battery)")
         else:
-            log.debug("ac_inhibit disabled - skipping ac-inhibit verification")
+            self.log_action("ac_inhibit disabled - skipping ac-inhibit verification")
 
     def run(self) -> None:
         """Run the full installation."""

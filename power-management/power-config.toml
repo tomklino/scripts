@@ -7,7 +7,7 @@ timeout_minutes = 20         # Minutes of inactivity before idle action triggers
 
 [lid_close_suspend]
 enabled = true               # Enable immediate suspend on lid close conditions
-on_battery = true            # Suspend immediately when on battery
+on_battery = true            # If lid is closed suspend immediately when unplugged
 require_no_external_monitor = true  # Only suspend if no external monitor connected
 
 [ac_inhibit]
