@@ -1,5 +1,4 @@
 #!/bin/bash
 
-xhost +si:localuser:$USER
 exec $(dirname "$0")/plover-4.0.0rc2+6.g53c416f-x86_64.AppImage
 

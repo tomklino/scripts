@@ -1,10 +1,10 @@
 [Service]
 Type=simple
-ExecStart=/opt/plover
-Environment="DISPLAY=:0"
+ExecStartPre=/opt/plover.d/plover-prep.sh
+ExecStart=/opt/plover.d/plover
 Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
+Environment="DISPLAY=:0"
 User=
-
 
 [Install]
 WantedBy=multi-user.target
