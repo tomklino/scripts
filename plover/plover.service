@@ -1,0 +1,11 @@
+[Service]
+Type=simple
+ExecStart=/opt/plover
+Environment="DISPLAY=:0"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
+User=
+
+
+[Install]
+WantedBy=multi-user.target
+
